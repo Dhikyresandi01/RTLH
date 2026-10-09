@@ -17,9 +17,19 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // User::factory()->create([
+        //     'name' => 'Test User',
+        //     'email' => 'test@example.com',
+        // ]);
+
+        // Urutan wajib mengikuti dependensi foreign key:
+        // wilayah -> user -> warga (+data dukung) -> program -> bantuan (+realisasi)
+        $this->call([
+            WilayahSeeder::class,
+            UserSeeder::class,
+            ProgramBantuanSeeder::class,
+            WargaSeeder::class,
+            BantuanSeeder::class,
         ]);
     }
 }
