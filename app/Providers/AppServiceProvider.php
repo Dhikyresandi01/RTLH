@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Paginator::useBootstrapFive();
         // Superadmin: kelola user, master data, akses semua laporan
         Gate::define('kelola-user', fn ($user) => $user->isSuperadmin());
         Gate::define('kelola-master-data', fn ($user) => $user->isSuperadmin());

@@ -18,7 +18,7 @@ class Warga extends Model
     protected $primaryKey = 'id_warga';
 
     protected $fillable = [
-        'nik', 'no_kk', 'nama', 'jenis_kelamin', 'tempat_lahir',
+        'nik', 'no_kk', 'nama', 'jenis_kelamin', 'tempat_lahir', 'tgl_lahir',
         'alamat', 'rt', 'rw', 'id_wilayah',
         'no_hp', 'kawin', 'pendidikan', 'pekerjaan', 'no_npwp', 'penghasilan', 'tabungan',
         'mampu_swadaya', 'dtsen', 'skor_kelayakan', 'status_update',

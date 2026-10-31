@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HunianController;
+use App\Http\Controllers\RumahController;
+use App\Http\Controllers\WargaController;
 use Illuminate\Support\Facades\Route;
-use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
+
 
 Route::middleware('guest')->group(function(){
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -16,11 +20,13 @@ Route::middleware('guest')->group(function(){
 Route::middleware('auth')->group(function() {
     Route::get('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/dashboard', function () {
-        return view('pages.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/Warga', function () { return view('pages.warga.viewwarga'); })->name('warga');
+    Route::resource('warga', WargaController::class);
+    Route::get('/Warga', [WargaController::class, 'index'])->name('warga');
+
+    Route::resource('hunian', HunianController::class);
+    Route::resource('rumah', RumahController::class);
 });
 
 
