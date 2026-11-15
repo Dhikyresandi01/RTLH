@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             ProgramBantuanSeeder::class,
             WargaSeeder::class,
             BantuanSeeder::class,
+            SpkKriteriaSeeder::class,
         ]);
     }
 }

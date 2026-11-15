@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Bantuan extends Model
 {
@@ -66,6 +67,14 @@ class Bantuan extends Model
 
     public function Realisasi() : HasMany {
         return $this->hasMany(Realisasi::class, 'id_bantuan');
+    }
+
+    public function realisasiTerbaru() : HasOne {
+        return $this->hasOne(Realisasi::class, 'id_bantuan')->latestOfMany('id_realisasi');
+    }
+
+    public function spkRanking() : HasOne {
+        return $this->hasOne(SpkRanking::class, 'id_bantuan');
     }
 
     // Hanya record yang berlaku saat ini dalam rantai pengajuan (bukan riwayat lama)

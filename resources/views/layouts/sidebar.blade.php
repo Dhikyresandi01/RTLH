@@ -42,6 +42,30 @@
                     </a>
                 </li>
 
+                @if(Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas())
+                <li class="sidebar-title">Pelaksanaan & Bantuan</li>
+
+                <li class="sidebar-item {{ request()->is('realisasi*') ? 'active' : '' }}">
+                    <a href="{{ route('realisasi.index') }}" class='sidebar-link d-flex justify-content-between align-items-center'>
+                        <div>
+                            <i class="bi bi-hammer"></i>
+                            <span>Realisasi Bantuan</span>
+                        </div>
+                        <span class="badge bg-success rounded-pill small" style="font-size: 0.65rem;">Progres</span>
+                    </a>
+                </li>
+                @endif
+
+                @if(Auth::user()->isSuperadmin())
+                <li class="sidebar-title">Master Data</li>
+                <li class="sidebar-item {{ request()->is('program-bantuan*') ? 'active' : '' }}">
+                    <a href="{{ route('program-bantuan.index') }}" class='sidebar-link'>
+                        <i class="bi bi-gift-fill"></i>
+                        <span>Jenis Bantuan</span>
+                    </a>
+                </li>
+                @endif
+
                 <li class="sidebar-title">Sistem & Akun</li>
 
                 @auth

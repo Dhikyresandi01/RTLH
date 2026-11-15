@@ -2,27 +2,41 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bantuan;
 use App\Models\DokumenRumah;
 use App\Models\DokumenWarga;
 use App\Models\Hunian;
+use App\Models\ProgramBantuan;
 use App\Models\Rumah;
+use App\Models\SpkRanking;
 use App\Models\Utilitas;
 use App\Models\Warga;
 use App\Models\Wilayah;
+use App\Services\SawRankingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class WargaController extends Controller
 {
     /**
-     * Menampilkan daftar data terpadu warga / calon penerima, hunian, dan fisik rumah.
+     * Membangun query data terpadu warga berdasarkan filter dan hak akses user login.
      */
-    public function index(Request $request)
+    protected function buildWargaQuery(Request $request)
     {
-        $query = Warga::with(['wilayah', 'Dokumen', 'Hunian.Rumah.Utilitas', 'Hunian.Rumah.DokumenRumah']);
+        $query = Warga::with([
+            'wilayah',
+            'Dokumen',
+            'Hunian.Rumah.Utilitas',
+            'Hunian.Rumah.DokumenRumah',
+            'bantuanAktif.spkRanking',
+            'bantuanAktif.verifikator',
+            'bantuanAktif.program',
+        ]);
 
         // Batasi akses jika user login memiliki cakupan wilayah (admin kelurahan)
         if (Auth::check()) {
@@ -33,20 +47,36 @@ class WargaController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('nik', 'like', "%{$search}%")
-                  ->orWhere('nama', 'like', "%{$search}%")
-                  ->orWhere('no_kk', 'like', "%{$search}%");
+                $q->where('warga.nik', 'like', "%{$search}%")
+                  ->orWhere('warga.nama', 'like', "%{$search}%")
+                  ->orWhere('warga.no_kk', 'like', "%{$search}%");
             });
         }
 
         // Fitur Filter Wilayah / Kelurahan
         if ($request->filled('id_wilayah')) {
-            $query->where('id_wilayah', $request->input('id_wilayah'));
+            $query->where('warga.id_wilayah', $request->input('id_wilayah'));
         }
 
         // Fitur Filter Status Verifikasi Profil
         if ($request->filled('status_update')) {
-            $query->where('status_update', $request->input('status_update'));
+            $query->where('warga.status_update', $request->input('status_update'));
+        }
+
+        // Fitur Filter Status Bantuan / Verifikasi Dinas
+        if ($request->filled('status_bantuan')) {
+            $statusBantuan = $request->input('status_bantuan');
+            $query->whereHas('bantuanAktif', function ($q) use ($statusBantuan) {
+                $q->where('status_bantuan', $statusBantuan);
+            });
+        }
+
+        // Fitur Filter Program / Jenis Bantuan
+        if ($request->filled('id_program')) {
+            $idProgram = $request->input('id_program');
+            $query->whereHas('bantuanAktif', function ($q) use ($idProgram) {
+                $q->where('id_program', $idProgram);
+            });
         }
 
         // Fitur Filter Status Kepemilikan Rumah
@@ -65,13 +95,63 @@ class WargaController extends Controller
             });
         }
 
-        $wargas = $query->latest('id_warga')->paginate(10)->withQueryString();
+        // Opsi Pengurutan: Peringkat Prioritas SAW (Khusus Dinas/Superadmin) atau Terbaru
+        $isDinas = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
+        if ($isDinas && $request->input('sort') === 'rank_asc') {
+            $query->leftJoin('bantuan', function ($join) {
+                $join->on('warga.id_warga', '=', 'bantuan.id_warga')
+                     ->where('bantuan.is_aktif', true);
+            })
+            ->leftJoin('spk_ranking', 'bantuan.id_bantuan', '=', 'spk_ranking.id_bantuan')
+            ->select('warga.*')
+            ->orderByRaw('spk_ranking.ranking IS NULL, spk_ranking.ranking ASC');
+        } else {
+            $query->latest('warga.id_warga');
+        }
+
+        return $query;
+    }
+
+    /**
+     * Menampilkan daftar data terpadu warga / calon penerima, hunian, dan fisik rumah.
+     */
+    public function index(Request $request)
+    {
+        $query = $this->buildWargaQuery($request);
+
+        $wargas = $query->paginate(10)->withQueryString();
         $wilayahs = Wilayah::orderBy('desa')->get();
+        $programs = ProgramBantuan::orderBy('nama_program')->get();
 
         // Cek nama view yang digunakan di project
         $viewName = view()->exists('pages.warga.viewwarga') ? 'pages.warga.viewwarga' : 'pages.warga.index';
 
-        return view($viewName, compact('wargas', 'wilayahs'));
+        return view($viewName, compact('wargas', 'wilayahs', 'programs'));
+    }
+
+    /**
+     * Mengekspor data calon penerima bantuan RTLH ke format spreadsheet Excel (.xls) native.
+     */
+    public function exportExcel(Request $request)
+    {
+        $query = $this->buildWargaQuery($request);
+        $wargas = $query->get();
+
+        $isDinas = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
+        $desaName = (Auth::check() && Auth::user()->wilayah) ? Str::slug(Auth::user()->wilayah->desa, '_') : 'Kota_Kediri';
+        $filename = 'Data_Calon_Penerima_RTLH_' . $desaName . '_' . date('Ymd_His') . '.xls';
+
+        $headers = [
+            'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
+        ];
+
+        return response()->streamDownload(function () use ($wargas, $isDinas) {
+            echo view('pages.warga.export-excel', compact('wargas', 'isDinas'))->render();
+        }, $filename, $headers);
     }
 
     /**
@@ -80,8 +160,9 @@ class WargaController extends Controller
     public function create()
     {
         $wilayahs = Wilayah::orderBy('desa')->get();
+        $programs = ProgramBantuan::where('is_aktif', true)->orderBy('nama_program')->get();
 
-        return view('pages.warga.create', compact('wilayahs'));
+        return view('pages.warga.create', compact('wilayahs', 'programs'));
     }
 
     /**
@@ -114,6 +195,9 @@ class WargaController extends Controller
             'tabungan'       => ['nullable', 'integer'],
             'mampu_swadaya'  => ['nullable', 'boolean'],
             'dtsen'          => ['nullable', 'integer', 'in:1,2,3,4,0'],
+
+            // Program Bantuan
+            'id_program'     => ['required', 'exists:program_bantuan,id_program'],
 
             // Upload Dokumen Warga
             'foto_ktp'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,pdf', 'max:2048'],
@@ -277,10 +361,30 @@ class WargaController extends Controller
                 }
             }
 
+            // 7. Otomatis buatkan usulan bantuan awal untuk calon penerima
+            // Ambil program aktif pertama, jika tidak ada tampilkan error
+            $program = ProgramBantuan::findOrFail($validated['id_program']);
+            Bantuan::create([
+                'id_warga' => $warga->id_warga,
+                'id_program' => $program->id_program,
+                'tahun_bantuan' => (int) date('Y'),
+                'id_user_pengajuan' => Auth::id() ?? 1,
+                'tgl_pengajuan' => now(),
+                'status_bantuan' => Bantuan::STATUS_DIAJUKAN,
+                'is_aktif' => true,
+            ]);
+
             DB::commit();
 
+            // 8. Otomatis hitung ulang perankingan SAW untuk seluruh data terpadu
+            try {
+                app(SawRankingService::class)->hitungDanSimpan((int) date('Y'));
+            } catch (\Exception $e) {
+                Log::warning('Otomatisasi SAW pada tambah warga: ' . $e->getMessage());
+            }
+
             return redirect()->route('warga.index')
-                ->with('success', 'Data calon penerima, kepemilikan hunian, dan survei fisik rumah berhasil disimpan.');
+                ->with('success', 'Data calon penerima, kepemilikan hunian, dan survei fisik berhasil disimpan. Peringkat SPK SAW telah otomatis diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -355,6 +459,9 @@ class WargaController extends Controller
             'tabungan'       => ['nullable', 'integer'],
             'mampu_swadaya'  => ['nullable', 'boolean'],
             'dtsen'          => ['nullable', 'integer', 'in:1,2,3,4,0'],
+
+            // Program Bantuan
+            'id_program'     => ['required', 'exists:program_bantuan,id_program'],
             'status_update'  => ['nullable', 'integer', 'in:0,1'],
 
             // Upload Dokumen Warga
@@ -544,8 +651,15 @@ class WargaController extends Controller
 
             DB::commit();
 
+            // Otomatis hitung ulang perankingan SAW untuk seluruh data terpadu
+            try {
+                app(SawRankingService::class)->hitungDanSimpan((int) date('Y'));
+            } catch (\Exception $e) {
+                Log::warning('Otomatisasi SAW pada update warga: ' . $e->getMessage());
+            }
+
             return redirect()->route('warga.index')
-                ->with('success', 'Data terpadu calon penerima berhasil diperbarui.');
+                ->with('success', 'Data terpadu calon penerima berhasil diperbarui dan ranking prioritas SPK telah disesuaikan.');
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -588,8 +702,15 @@ class WargaController extends Controller
 
             DB::commit();
 
+            // Otomatis hitung ulang perankingan SAW untuk seluruh data terpadu
+            try {
+                app(SawRankingService::class)->hitungDanSimpan((int) date('Y'));
+            } catch (\Exception $e) {
+                Log::warning('Otomatisasi SAW pada delete warga: ' . $e->getMessage());
+            }
+
             return redirect()->route('warga.index')
-                ->with('success', 'Data warga beserta seluruh survei hunian dan fisik rumah berhasil dihapus.');
+                ->with('success', 'Data warga beserta seluruh survei hunian dan fisik rumah berhasil dihapus. Peringkat SAW telah diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
 

@@ -275,6 +275,22 @@
                                             <small class="text-muted d-block ms-4">Keluarga sanggup menyediakan tenaga/material tambahan.</small>
                                         </div>
                                     </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Jenis Bantuan <span class="text-danger">*</span></label>
+                                        <select name="id_program" class="form-select @error('id_program') is-invalid @enderror" required>
+                                            <option value="">-- Pilih Jenis Bantuan --</option>
+                                            @forelse($programs as $prog)
+                                                <option value="{{ $prog->id_program }}" {{ old('id_program') == $prog->id_program ? 'selected' : '' }}>
+                                                    {{ $prog->nama_program }}
+                                                </option>
+                                            @empty
+                                                <option value="" disabled>Belum ada jenis bantuan — hubungi Superadmin</option>
+                                            @endforelse
+                                        </select>
+                                        @error('id_program') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        <small class="text-muted">Jenis bantuan yang akan diusulkan untuk warga ini</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>

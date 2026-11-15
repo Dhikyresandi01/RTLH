@@ -15,7 +15,7 @@ class DokumenRealisasi extends Model
     protected $primaryKey = 'id_dokumen_realisasi';
 
     protected $fillable = [
-        'id_realisasi   ',
+        'id_realisasi',
         'jenis_foto',
         'path_foto',
     ];

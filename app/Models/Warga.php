@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Warga extends Model
 {
@@ -55,6 +56,21 @@ class Warga extends Model
 
     public function Bantuan() : HasMany {
         return $this->hasMany(Bantuan::class, 'id_warga');
+    }
+
+    public function bantuanAktif() : HasOne {
+        return $this->hasOne(Bantuan::class, 'id_warga')->where('is_aktif', true)->latestOfMany('id_bantuan');
+    }
+
+    public function spkRanking() : HasOneThrough {
+        return $this->hasOneThrough(
+            SpkRanking::class,
+            Bantuan::class,
+            'id_warga',
+            'id_bantuan',
+            'id_warga',
+            'id_bantuan'
+        );
     }
 
     /**
