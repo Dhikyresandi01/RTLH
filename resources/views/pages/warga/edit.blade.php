@@ -26,7 +26,7 @@
             <div class="col-12 col-md-7">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{{ route('warga') }}">Data Calon Penerima</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('warga.index') }}">Daftar Usulan</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Edit Terpadu</li>
                     </ol>
                 </nav>
@@ -37,7 +37,7 @@
                 <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-outline-info">
                     <i class="bi bi-eye me-1"></i> Lihat Profil
                 </a>
-                <a href="{{ route('warga') }}" class="btn btn-outline-secondary">
+                <a href="{{ route('warga.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i> Kembali
                 </a>
             </div>
@@ -67,7 +67,25 @@
         $rumah = $hunian?->Rumah->first();
         $utilitas = $rumah?->Utilitas->first();
         $dokumen = $warga->Dokumen;
+        $bantuan = $warga->bantuanAktif ?? $warga->Bantuan?->firstWhere('is_aktif', true);
+        $programs = $programs ?? \App\Models\ProgramBantuan::orderBy('nama_program')->get();
+        $isDinas = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
     @endphp
+
+    @if($bantuan && $bantuan->catatan_verifikasi)
+        <div class="alert {{ (int) $bantuan->status_bantuan === \App\Models\Bantuan::STATUS_REVISI ? 'alert-warning' : 'alert-info' }} shadow-sm mb-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi {{ (int) $bantuan->status_bantuan === \App\Models\Bantuan::STATUS_REVISI ? 'bi-exclamation-triangle-fill text-warning' : 'bi-info-circle-fill text-info' }} fs-4"></i>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <strong class="text-dark">Catatan Verifikator Dinas</strong>
+                        @include('pages.warga.partials._status_badge', ['bantuan' => $bantuan])
+                    </div>
+                    <p class="mb-0 small text-dark">{{ $bantuan->catatan_verifikasi }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <form action="{{ route('warga.update', $warga->id_warga) }}" method="POST" enctype="multipart/form-data">
         @csrf
@@ -181,13 +199,27 @@
 
                                     <div class="col-12 col-md-6">
                                         <label class="form-label fw-semibold">Kelurahan / Wilayah <span class="text-danger">*</span></label>
-                                        <select name="id_wilayah" class="form-select" required>
-                                            @foreach($wilayahs as $wilayah)
-                                                <option value="{{ $wilayah->id_wilayah }}" {{ old('id_wilayah', $warga->id_wilayah) == $wilayah->id_wilayah ? 'selected' : '' }}>
-                                                    {{ $wilayah->desa }} (Kec. {{ $wilayah->kecamatan }})
+                                        @if(Auth::check() && Auth::user()->isAdminKelurahan())
+                                            @php
+                                                $lockedWilayahId = Auth::user()->id_wilayah ?? $warga->id_wilayah;
+                                                $lockedWilayah = $wilayahs->firstWhere('id_wilayah', $lockedWilayahId);
+                                            @endphp
+                                            <select class="form-select bg-light" disabled>
+                                                <option selected>
+                                                    {{ $lockedWilayah ? $lockedWilayah->desa . ' (Kec. ' . $lockedWilayah->kecamatan . ')' : ($warga->wilayah->desa ?? 'Wilayah Kelurahan Anda') }}
                                                 </option>
-                                            @endforeach
-                                        </select>
+                                            </select>
+                                            <input type="hidden" name="id_wilayah" value="{{ $lockedWilayahId }}">
+                                            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Terkunci sesuai wilayah kelurahan Anda</small>
+                                        @else
+                                            <select name="id_wilayah" class="form-select" required>
+                                                @foreach($wilayahs as $wilayah)
+                                                    <option value="{{ $wilayah->id_wilayah }}" {{ old('id_wilayah', $warga->id_wilayah) == $wilayah->id_wilayah ? 'selected' : '' }}>
+                                                        {{ $wilayah->desa }} (Kec. {{ $wilayah->kecamatan }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        @endif
                                     </div>
 
                                     <div class="col-12 col-md-6">
@@ -241,10 +273,19 @@
 
                                     <div class="col-12 col-md-6">
                                         <label class="form-label fw-semibold">Status Verifikasi Data</label>
-                                        <select name="status_update" class="form-select">
-                                            <option value="0" {{ old('status_update', $warga->status_update) == 0 ? 'selected' : '' }}>0 - Belum Diverifikasi / Draft</option>
-                                            <option value="1" {{ old('status_update', $warga->status_update) == 1 ? 'selected' : '' }}>1 - Terverifikasi Layak</option>
-                                        </select>
+                                        @if($isDinas)
+                                            <select name="status_update" class="form-select">
+                                                <option value="0" {{ old('status_update', $warga->status_update) == 0 ? 'selected' : '' }}>0 - Belum Diverifikasi / Draft</option>
+                                                <option value="1" {{ old('status_update', $warga->status_update) == 1 ? 'selected' : '' }}>1 - Terverifikasi Layak</option>
+                                            </select>
+                                        @else
+                                            <select class="form-select bg-light" disabled>
+                                                <option value="0" {{ (int) old('status_update', $warga->status_update ?? 0) === 0 ? 'selected' : '' }}>0 - Belum Diverifikasi / Draft</option>
+                                                <option value="1" {{ (int) old('status_update', $warga->status_update ?? 0) === 1 ? 'selected' : '' }}>1 - Terverifikasi Layak</option>
+                                            </select>
+                                            <input type="hidden" name="status_update" value="{{ old('status_update', $warga->status_update ?? 0) }}">
+                                            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Hanya dapat diubah oleh Admin Dinas / Superadmin</small>
+                                        @endif
                                     </div>
 
                                     <div class="col-12 col-md-6">
@@ -254,6 +295,21 @@
                                                 Mampu Berswadaya
                                             </label>
                                         </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Jenis Bantuan</label>
+                                        <select name="id_program" class="form-select @error('id_program') is-invalid @enderror">
+                                            <option value="">-- Pilih Jenis Bantuan --</option>
+                                            @forelse($programs as $prog)
+                                                <option value="{{ $prog->id_program }}" {{ old('id_program', $bantuan?->id_program) == $prog->id_program ? 'selected' : '' }}>
+                                                    {{ $prog->nama_program }}
+                                                </option>
+                                            @empty
+                                                <option value="" disabled>Belum ada jenis bantuan — hubungi Superadmin</option>
+                                            @endforelse
+                                        </select>
+                                        @error('id_program') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
