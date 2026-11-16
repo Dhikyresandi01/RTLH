@@ -2,6 +2,43 @@
 
 @section('title', 'Dashboard')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #mapDashboard {
+        height: 520px;
+        width: 100%;
+        border-radius: 10px;
+        z-index: 1;
+        border: 1px solid #e2e8f0;
+    }
+    .leaflet-container {
+        font-family: 'Nunito', sans-serif;
+    }
+    .leaflet-popup-content-wrapper {
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        padding: 0;
+        overflow: hidden;
+    }
+    .leaflet-popup-content {
+        margin: 0 !important;
+        line-height: 1.4;
+    }
+    .custom-map-popup {
+        min-width: 270px;
+        max-width: 320px;
+    }
+    .custom-map-popup .popup-header {
+        padding: 12px 14px;
+        border-bottom: 1px solid #edf2f7;
+    }
+    .custom-map-popup .popup-body {
+        padding: 12px 14px;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="page-heading">
     <!-- Header Title & Action Buttons -->
@@ -27,16 +64,6 @@
                     <span>Data Calon Penerima</span>
                 </a>
             @endif
-
-            <a href="{{ route('hunian.index') }}" class="btn btn-outline-primary d-flex align-items-center gap-2">
-                <i class="bi bi-geo-alt"></i>
-                <span>Data Hunian</span>
-            </a>
-
-            <a href="{{ route('rumah.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
-                <i class="bi bi-house-gear"></i>
-                <span>Survei Fisik</span>
-            </a>
         </div>
     </div>
 
@@ -210,6 +237,55 @@
                                     <strong class="fs-6 text-success">{{ $usulanDiverifikasi }} Usulan</strong>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Peta Persebaran Spasial RTLH OpenStreetMap -->
+    <section class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 border-bottom py-3">
+                    <div>
+                        <h5 class="card-title fw-bold text-dark mb-1 d-flex align-items-center">
+                            <i class="bi bi-geo-alt-fill text-danger me-2 fs-5"></i>Peta Persebaran Lokasi Calon Penerima RTLH
+                        </h5>
+                        <p class="text-muted small mb-0">
+                            Pemetaan spasial berbasis OpenStreetMap sebaran rumah calon penerima bantuan RTLH se-Kota Kediri
+                        </p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-light-primary text-primary fw-bold px-3 py-2 rounded-pill">
+                            <i class="bi bi-pin-map-fill me-1"></i><span id="renderedMarkerCount">{{ $mapPoints->count() }}</span> Titik Terdata
+                        </span>
+                        <button type="button" id="btnResetMapView" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 rounded-pill" title="Kembalikan Pandangan Peta ke Seluruh Wilayah">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <span class="d-none d-sm-inline">Reset Peta</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body p-3">
+                    <!-- Search Bar & Controls -->
+                    <div class="row align-items-center mb-3 g-2">
+                        <div class="col-12 col-md-6 col-lg-5">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" id="mapSearchInput" class="form-control border-start-0 ps-0" placeholder="Cari nama warga, NIK, atau kelurahan...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Container -->
+                    <div id="mapDashboard"></div>
+
+                    <!-- Footnote -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2 border-top text-muted small">
+                        <div>
+                            <span class="text-secondary"><i class="bi bi-info-circle me-1"></i>Klik pada titik marker peta untuk melihat ringkasan calon penerima, alamat, kondisi fisik rumah, dan berkas lengkap.</span>
                         </div>
                     </div>
                 </div>
@@ -473,8 +549,159 @@
 @endsection
 
 @push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // ==========================================
+    // 0. PETA PERSEBARAN SPASIAL RTLH (OPENSTREETMAP)
+    // ==========================================
+    const mapPointsData = @json($mapPoints);
+    const mapContainer = document.getElementById('mapDashboard');
+
+    if (mapContainer && typeof L !== 'undefined') {
+        const defaultKediriCenter = [-7.8166, 112.0116];
+        const map = L.map('mapDashboard', {
+            zoomControl: true,
+            scrollWheelZoom: true
+        }).setView(defaultKediriCenter, 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors | E-RTLH Kediri',
+            maxZoom: 19
+        }).addTo(map);
+
+        const markersLayer = L.layerGroup().addTo(map);
+
+        function createCustomPopup(pt) {
+            return `
+                <div class="custom-map-popup">
+                    <div class="popup-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-secondary text-white" style="font-size: 0.7rem;">${pt.status_bantuan}</span>
+                            <span class="badge bg-light text-muted border" style="font-size: 0.7rem;">${pt.status_rumah}</span>
+                        </div>
+                        <h6 class="mb-0 fw-bold text-dark text-truncate" title="${pt.nama}">
+                            <i class="bi bi-person-fill text-primary me-1"></i>${pt.nama}
+                        </h6>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">NIK: ${pt.nik}</small>
+                    </div>
+                    <div class="popup-body">
+                        <div class="mb-2" style="font-size: 0.78rem;">
+                            <div class="text-muted"><i class="bi bi-geo-alt-fill me-1 text-danger"></i><strong>Alamat:</strong></div>
+                            <div class="text-dark">${pt.alamat}, Kel. ${pt.kelurahan}, Kec. ${pt.kecamatan}</div>
+                        </div>
+                        <div class="mb-2 p-2 rounded bg-light border border-light" style="font-size: 0.75rem;">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Kondisi Atap:</span>
+                                <strong class="text-dark">${pt.kondisi_atap}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Kondisi Dinding:</span>
+                                <strong class="text-dark">${pt.kondisi_dinding}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Kondisi Lantai:</span>
+                                <strong class="text-dark">${pt.kondisi_lantai}</strong>
+                            </div>
+                        </div>
+                        <a href="${pt.url_detail}" class="btn btn-sm btn-primary w-100 py-1 text-white shadow-sm" style="font-size: 0.8rem;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Buka Detail Warga
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        let defaultBounds = null;
+
+        function renderMarkers(searchQuery = '') {
+            markersLayer.clearLayers();
+            const bounds = L.latLngBounds();
+            let count = 0;
+            const normalizedQuery = (searchQuery || '').trim().toLowerCase();
+
+            mapPointsData.forEach(function (pt) {
+                if (!pt.lat || !pt.lng) return;
+
+                // Search Filter
+                if (normalizedQuery) {
+                    const matchName = (pt.nama || '').toLowerCase().includes(normalizedQuery);
+                    const matchNik = (pt.nik || '').toLowerCase().includes(normalizedQuery);
+                    const matchKel = (pt.kelurahan || '').toLowerCase().includes(normalizedQuery);
+                    const matchAlamat = (pt.alamat || '').toLowerCase().includes(normalizedQuery);
+                    if (!matchName && !matchNik && !matchKel && !matchAlamat) return;
+                }
+
+                // Titik marker seragam tanpa kode warna
+                const marker = L.circleMarker([pt.lat, pt.lng], {
+                    radius: 6,
+                    fillColor: '#435ebe',
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.85
+                });
+
+                marker.bindPopup(createCustomPopup(pt), {
+                    maxWidth: 320,
+                    className: 'custom-leaflet-popup'
+                });
+
+                marker.bindTooltip(`<strong>${pt.nama}</strong><br><small>Kel. ${pt.kelurahan}</small>`, {
+                    direction: 'top',
+                    offset: [0, -6],
+                    opacity: 0.9
+                });
+
+                marker.addTo(markersLayer);
+                bounds.extend([pt.lat, pt.lng]);
+                count++;
+            });
+
+            const countEl = document.getElementById('renderedMarkerCount');
+            if (countEl) countEl.textContent = count;
+
+            if (count > 0 && bounds.isValid()) {
+                if (!defaultBounds && !searchQuery) {
+                    defaultBounds = bounds;
+                }
+                map.fitBounds(bounds, { padding: [35, 35], maxZoom: 16 });
+            }
+        }
+
+        renderMarkers('');
+
+        // Search input debounce handler
+        const searchInput = document.getElementById('mapSearchInput');
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    renderMarkers(this.value);
+                }, 250);
+            });
+        }
+
+        // Reset map view button
+        const resetBtn = document.getElementById('btnResetMapView');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                if (searchInput) searchInput.value = '';
+                renderMarkers('');
+                if (defaultBounds && defaultBounds.isValid()) {
+                    map.fitBounds(defaultBounds, { padding: [35, 35], maxZoom: 16 });
+                } else {
+                    map.setView(defaultKediriCenter, 13);
+                }
+            });
+        }
+
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 350);
+    }
+
     // 1. Chart Statistik Status Usulan Bantuan RTLH
     const statusLabels = @json($statusLabels);
     const statusData = @json($statusData);

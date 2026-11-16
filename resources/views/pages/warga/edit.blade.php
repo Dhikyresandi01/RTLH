@@ -2,6 +2,22 @@
 
 @section('title', 'Edit Data Terpadu Calon Penerima RTLH')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #mapPickerEdit {
+        height: 280px;
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #ced4da;
+        z-index: 1;
+    }
+    .leaflet-container {
+        font-family: inherit;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="page-heading">
     <!-- Page Header -->
@@ -373,19 +389,34 @@
                                     <input type="number" min="1" name="jml_penghuni" class="form-control" value="{{ old('jml_penghuni', $hunian?->jml_penghuni ?? 1) }}">
                                 </div>
 
+                                <hr class="my-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold text-dark mb-0">
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i> Titik Lokasi Rumah (OSM)
+                                    </h6>
+                                    <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2" style="font-size: 0.75rem;" onclick="getCurrentLocationEdit()" title="Ambil GPS perangkat Anda saat ini">
+                                        <i class="bi bi-crosshair me-1"></i> Lokasi Saya
+                                    </button>
+                                </div>
+
+                                <!-- Wadah Peta Leaflet OpenStreetMap -->
                                 <div class="mb-2">
-                                    <label class="form-label small fw-semibold">Latitude</label>
-                                    <input type="text" name="latitude" id="editLat" class="form-control form-control-sm" value="{{ old('latitude', $hunian?->latitude) }}">
+                                    <div id="mapPickerEdit"></div>
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                        <i class="bi bi-cursor-fill text-primary me-1"></i> Klik pada peta atau geser pin merah untuk memperbarui titik koordinat rumah.
+                                    </small>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Longitude</label>
-                                    <input type="text" name="longitude" id="editLong" class="form-control form-control-sm" value="{{ old('longitude', $hunian?->longitude) }}">
+                                <div class="row g-2 mb-1">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold mb-1">Latitude</label>
+                                        <input type="text" name="latitude" id="editLat" class="form-control form-control-sm" placeholder="-7.816667" value="{{ old('latitude', $hunian?->latitude) }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold mb-1">Longitude</label>
+                                        <input type="text" name="longitude" id="editLong" class="form-control form-control-sm" placeholder="112.011667" value="{{ old('longitude', $hunian?->longitude) }}">
+                                    </div>
                                 </div>
-
-                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="getCurrentLocationEdit()">
-                                    <i class="bi bi-crosshair me-1"></i> Update Lokasi GPS Saat Ini
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -612,28 +643,112 @@
     </form>
 </div>
 
+@push('scripts')
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
+    // 1. Inisialisasi Peta Leaflet OpenStreetMap
+    var defaultLat = -7.816667; // Titik Alun-Alun Kota Kediri
+    var defaultLng = 112.011667;
+
+    var inputLatVal = document.getElementById('editLat').value;
+    var inputLongVal = document.getElementById('editLong').value;
+
+    var startLat = inputLatVal && !isNaN(parseFloat(inputLatVal)) ? parseFloat(inputLatVal) : defaultLat;
+    var startLng = inputLongVal && !isNaN(parseFloat(inputLongVal)) ? parseFloat(inputLongVal) : defaultLng;
+    var initialZoom = (inputLatVal && inputLongVal) ? 16 : 13;
+
+    var mapEdit = L.map('mapPickerEdit').setView([startLat, startLng], initialZoom);
+
+    // Pasang Tile Layer OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> kontributor'
+    }).addTo(mapEdit);
+
+    // Pasang Pin Marker Draggable
+    var markerEdit = L.marker([startLat, startLng], {
+        draggable: true
+    }).addTo(mapEdit);
+
+    markerEdit.bindPopup("<b>Titik Lokasi Rumah</b><br>Geser pin merah ini atau klik pada peta.").openPopup();
+
+    // Fungsi perbarui nilai input Latitude & Longitude
+    function updateCoordinatesEdit(lat, lng) {
+        document.getElementById('editLat').value = lat.toFixed(6);
+        document.getElementById('editLong').value = lng.toFixed(6);
+        markerEdit.setPopupContent("<b>Titik Lokasi Rumah</b><br>Lat: " + lat.toFixed(6) + "<br>Long: " + lng.toFixed(6));
+    }
+
+    // Jika pin marker digeser (dragend)
+    markerEdit.on('dragend', function (e) {
+        var pos = markerEdit.getLatLng();
+        updateCoordinatesEdit(pos.lat, pos.lng);
+    });
+
+    // Jika peta diklik di mana saja
+    mapEdit.on('click', function (e) {
+        markerEdit.setLatLng(e.latlng);
+        updateCoordinatesEdit(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Sinkronisasi jika user mengetik manual angka di kotak input
+    function syncMapFromInputsEdit() {
+        var lat = parseFloat(document.getElementById('editLat').value);
+        var lng = parseFloat(document.getElementById('editLong').value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            markerEdit.setLatLng([lat, lng]);
+            mapEdit.panTo([lat, lng]);
+            markerEdit.setPopupContent("<b>Titik Lokasi Rumah</b><br>Lat: " + lat.toFixed(6) + "<br>Long: " + lng.toFixed(6));
+        }
+    }
+    document.getElementById('editLat').addEventListener('change', syncMapFromInputsEdit);
+    document.getElementById('editLong').addEventListener('change', syncMapFromInputsEdit);
+
+    // Ambil koordinat GPS saat ini menggunakan Geolocation API browser
+    function getCurrentLocationEdit() {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                updateCoordinatesEdit(lat, lng);
+                markerEdit.setLatLng([lat, lng]);
+                mapEdit.setView([lat, lng], 17);
+                markerEdit.openPopup();
+            }, function(error) {
+                alert("Gagal mengambil lokasi GPS: " + error.message + ". Pastikan izin lokasi (GPS) diaktifkan pada browser.");
+            }, {
+                enableHighAccuracy: true
+            });
+        } else {
+            alert("Browser Anda tidak mendukung fitur Geolocation.");
+        }
+    }
+
+    // Perbaiki rendering peta saat tab Langkah 2 dibuka
+    var step2TabEdit = document.querySelector('#tab-step2');
+    if (step2TabEdit) {
+        step2TabEdit.addEventListener('shown.bs.tab', function () {
+            setTimeout(function() {
+                mapEdit.invalidateSize();
+            }, 200);
+        });
+    }
+
+    // Fungsi untuk berpindah tab langkah wizard
     function goToStep(stepId) {
         var triggerEl = document.querySelector('#tab-' + stepId);
         if (triggerEl) {
             var tab = new bootstrap.Tab(triggerEl);
             tab.show();
             window.scrollTo({ top: 120, behavior: 'smooth' });
-        }
-    }
-
-    function getCurrentLocationEdit() {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                document.getElementById('editLat').value = position.coords.latitude.toFixed(6);
-                document.getElementById('editLong').value = position.coords.longitude.toFixed(6);
-                alert("Titik koordinat berhasil diperbarui:\nLat: " + position.coords.latitude + "\nLong: " + position.coords.longitude);
-            }, function(error) {
-                alert("Gagal mengambil lokasi GPS: " + error.message);
-            }, {
-                enableHighAccuracy: true
-            });
+            if (stepId === 'step2') {
+                setTimeout(function() {
+                    mapEdit.invalidateSize();
+                }, 200);
+            }
         }
     }
 </script>
+@endpush
 @endsection

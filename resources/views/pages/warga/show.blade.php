@@ -2,6 +2,22 @@
 
 @section('title', 'Detail Calon Penerima RTLH - ' . $warga->nama)
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #mapDetail {
+        height: 250px;
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #ced4da;
+        z-index: 1;
+    }
+    .leaflet-container {
+        font-family: inherit;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="page-heading">
     <!-- Breadcrumb & Navigasi -->
@@ -229,6 +245,15 @@
                                     {{ $hunian->latitude ?? '-' }}, {{ $hunian->longitude ?? '-' }}
                                 </span>
                             </div>
+
+                            @if($hunian->latitude && $hunian->longitude)
+                                <div class="col-12 mt-2">
+                                    <label class="text-muted small d-block mb-1">
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i> Peta Lokasi Rumah (OpenStreetMap)
+                                    </label>
+                                    <div id="mapDetail"></div>
+                                </div>
+                            @endif
                         </div>
                     @else
                         <p class="text-muted small mb-0 py-2">Belum ada data kepemilikan hunian yang tercatat.</p>
@@ -392,4 +417,26 @@
         </div>
     </div>
 </div>
+
+@if($hunian?->latitude && $hunian?->longitude)
+@push('scripts')
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    var lat = {{ (float) $hunian->latitude }};
+    var lng = {{ (float) $hunian->longitude }};
+
+    var mapShow = L.map('mapDetail').setView([lat, lng], 16);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> kontributor'
+    }).addTo(mapShow);
+
+    var markerShow = L.marker([lat, lng]).addTo(mapShow);
+    markerShow.bindPopup("<b>{{ addslashes($warga->nama) }}</b><br>{{ addslashes($warga->alamat ?? '-') }}<br>Lat: " + lat + "<br>Long: " + lng).openPopup();
+</script>
+@endpush
+@endif
+
 @endsection

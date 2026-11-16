@@ -197,7 +197,7 @@ class WargaController extends Controller
             'dtsen'          => ['nullable', 'integer', 'in:1,2,3,4,0'],
 
             // Program Bantuan
-            'id_program'     => ['required', 'exists:program_bantuan,id_program'],
+            'id_program'     => ['nullable', 'exists:program_bantuan,id_program'],
 
             // Upload Dokumen Warga
             'foto_ktp'       => ['nullable', 'image', 'mimes:jpeg,png,jpg,pdf', 'max:2048'],
@@ -361,18 +361,19 @@ class WargaController extends Controller
                 }
             }
 
-            // 7. Otomatis buatkan usulan bantuan awal untuk calon penerima
-            // Ambil program aktif pertama, jika tidak ada tampilkan error
-            $program = ProgramBantuan::findOrFail($validated['id_program']);
-            Bantuan::create([
-                'id_warga' => $warga->id_warga,
-                'id_program' => $program->id_program,
-                'tahun_bantuan' => (int) date('Y'),
-                'id_user_pengajuan' => Auth::id() ?? 1,
-                'tgl_pengajuan' => now(),
-                'status_bantuan' => Bantuan::STATUS_DIAJUKAN,
-                'is_aktif' => true,
-            ]);
+            // 7. Otomatis buatkan usulan bantuan awal jika jenis bantuan dipilih
+            if (!empty($validated['id_program'])) {
+                $program = ProgramBantuan::findOrFail($validated['id_program']);
+                Bantuan::create([
+                    'id_warga' => $warga->id_warga,
+                    'id_program' => $program->id_program,
+                    'tahun_bantuan' => (int) date('Y'),
+                    'id_user_pengajuan' => Auth::id() ?? 1,
+                    'tgl_pengajuan' => now(),
+                    'status_bantuan' => Bantuan::STATUS_DIAJUKAN,
+                    'is_aktif' => true,
+                ]);
+            }
 
             DB::commit();
 
@@ -461,7 +462,7 @@ class WargaController extends Controller
             'dtsen'          => ['nullable', 'integer', 'in:1,2,3,4,0'],
 
             // Program Bantuan
-            'id_program'     => ['required', 'exists:program_bantuan,id_program'],
+            'id_program'     => ['nullable', 'exists:program_bantuan,id_program'],
             'status_update'  => ['nullable', 'integer', 'in:0,1'],
 
             // Upload Dokumen Warga

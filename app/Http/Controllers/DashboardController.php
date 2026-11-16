@@ -38,6 +38,7 @@ class DashboardController extends Controller
         $rumahRusakRingan = 0;
         $recentBantuan = collect();
         $recentWarga = collect();
+        $mapPoints = collect();
         $kecamatanLabels = ['Mojoroto', 'Kota', 'Pesantren'];
         $kecamatanData = [0, 0, 0];
 
@@ -126,6 +127,72 @@ class DashboardController extends Controller
                 $sebaranKecamatan['Kota'] ?? ($sebaranKecamatan['Kecamatan Kota'] ?? 0),
                 $sebaranKecamatan['Pesantren'] ?? ($sebaranKecamatan['Kecamatan Pesantren'] ?? 0),
             ];
+
+            // 7. Data Titik Spasial OpenStreetMap untuk Peta Persebaran RTLH
+            $mapPointsQuery = Hunian::whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->with([
+                    'warga.wilayah',
+                    'warga.bantuanAktif.program',
+                    'Rumah',
+                ]);
+
+            if ($user && !$user->isSuperadmin() && !$user->isAdminDinas()) {
+                $mapPointsQuery->whereHas('warga', function ($q) use ($user) {
+                    $q->where('id_wilayah', $user->id_wilayah);
+                });
+            }
+
+            $mapPoints = $mapPointsQuery->get()->map(function ($hunian) {
+                $warga = $hunian->warga;
+                $rumah = $hunian->Rumah->first();
+                $bantuan = $warga?->bantuanAktif;
+
+                $kondisiAtap = $rumah?->kondisi_atap == 3 ? 'Rusak Berat' : ($rumah?->kondisi_atap == 2 ? 'Rusak Sedang' : 'Baik');
+                $kondisiDinding = $rumah?->kondisi_dinding == 3 ? 'Rusak Berat' : ($rumah?->kondisi_dinding == 2 ? 'Rusak Sedang' : 'Baik');
+                $kondisiLantai = $rumah?->kondisi_lantai == 3 ? 'Rusak Berat' : ($rumah?->kondisi_lantai == 2 ? 'Rusak Sedang' : 'Baik');
+                $isRusakBerat = ($rumah?->kondisi_atap == 3 || $rumah?->kondisi_dinding == 3 || $rumah?->kondisi_lantai == 3);
+
+                $statusText = match ((int) ($bantuan?->status_bantuan ?? -1)) {
+                    Bantuan::STATUS_DIREALISASIKAN => 'Direalisasikan',
+                    Bantuan::STATUS_DISETUJUI => 'Disetujui Dinas',
+                    Bantuan::STATUS_DIVERIFIKASI => 'Diverifikasi Lapangan',
+                    Bantuan::STATUS_REVISI => 'Perlu Revisi',
+                    Bantuan::STATUS_DITOLAK => 'Ditolak',
+                    Bantuan::STATUS_DIAJUKAN => 'Diajukan',
+                    default => 'Belum Diusulkan',
+                };
+
+                $statusColor = match ((int) ($bantuan?->status_bantuan ?? -1)) {
+                    Bantuan::STATUS_DIREALISASIKAN, Bantuan::STATUS_DISETUJUI => 'success',
+                    Bantuan::STATUS_DIVERIFIKASI => 'info',
+                    Bantuan::STATUS_REVISI, Bantuan::STATUS_DIAJUKAN => 'warning',
+                    Bantuan::STATUS_DITOLAK => 'danger',
+                    default => 'secondary',
+                };
+
+                return [
+                    'id_warga'        => $warga?->id_warga,
+                    'nama'            => $warga?->nama ?? 'Tanpa Nama',
+                    'nik'             => $warga?->nik ?? '-',
+                    'alamat'          => ($warga?->alamat ?? '') . ' (RT ' . ($warga?->rt ?? '-') . '/RW ' . ($warga?->rw ?? '-') . ')',
+                    'kelurahan'       => $warga?->wilayah?->desa ?? '-',
+                    'kecamatan'       => $warga?->wilayah?->kecamatan ?? 'Kediri',
+                    'lat'             => (float) $hunian->latitude,
+                    'lng'             => (float) $hunian->longitude,
+                    'luas_rumah'      => $hunian->luas_rumah ?? 0,
+                    'status_rumah'    => $hunian->status_rumah == 1 ? 'Milik Sendiri' : ($hunian->status_rumah == 2 ? 'Sewa' : 'Menumpang'),
+                    'program'         => $bantuan?->program?->nama_program ?? 'Bantuan RTLH',
+                    'status_bantuan'  => $statusText,
+                    'status_code'     => $bantuan?->status_bantuan ?? -1,
+                    'status_color'    => $statusColor,
+                    'is_rusak_berat'  => $isRusakBerat,
+                    'kondisi_atap'    => $kondisiAtap,
+                    'kondisi_dinding' => $kondisiDinding,
+                    'kondisi_lantai'  => $kondisiLantai,
+                    'url_detail'      => $warga ? route('warga.show', $warga->id_warga) : '#',
+                ];
+            });
         } catch (\Throwable $e) {
             Log::warning('DashboardController query warning: ' . $e->getMessage());
         }
@@ -211,7 +278,8 @@ class DashboardController extends Controller
             'kecamatanData',
             'statusLabels',
             'statusData',
-            'tahapanAlur'
+            'tahapanAlur',
+            'mapPoints'
         ));
     }
 }

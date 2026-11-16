@@ -2,6 +2,22 @@
 
 @section('title', 'Tambah Data Terpadu Calon Penerima RTLH')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #mapPicker {
+        height: 280px;
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #ced4da;
+        z-index: 1;
+    }
+    .leaflet-container {
+        font-family: inherit;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="page-heading">
     <!-- Page Header -->
@@ -277,8 +293,8 @@
                                     </div>
 
                                     <div class="col-12">
-                                        <label class="form-label fw-semibold">Jenis Bantuan <span class="text-danger">*</span></label>
-                                        <select name="id_program" class="form-select @error('id_program') is-invalid @enderror" required>
+                                        <label class="form-label fw-semibold">Jenis Bantuan <span class="text-muted fw-normal"></span></label>
+                                        <select name="id_program" class="form-select @error('id_program') is-invalid @enderror">
                                             <option value="">-- Pilih Jenis Bantuan --</option>
                                             @forelse($programs as $prog)
                                                 <option value="{{ $prog->id_program }}" {{ old('id_program') == $prog->id_program ? 'selected' : '' }}>
@@ -445,21 +461,33 @@
                                 </div>
 
                                 <hr class="my-3">
-                                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-pin-map-fill text-danger me-1"></i> Titik Koordinat GPS</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold text-dark mb-0">
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i> Titik Lokasi Rumah (OSM)
+                                    </h6>
+                                    <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2" style="font-size: 0.75rem;" onclick="getCurrentLocation()" title="Ambil GPS perangkat Anda saat ini">
+                                        <i class="bi bi-crosshair me-1"></i> Lokasi Saya
+                                    </button>
+                                </div>
 
+                                <!-- Wadah Peta Leaflet OpenStreetMap -->
                                 <div class="mb-2">
-                                    <label class="form-label small fw-semibold">Latitude</label>
-                                    <input type="text" name="latitude" id="inputLat" class="form-control form-control-sm" placeholder="Contoh: -7.816667" value="{{ old('latitude') }}">
+                                    <div id="mapPicker"></div>
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                        <i class="bi bi-cursor-fill text-primary me-1"></i> Klik pada peta atau geser pin merah untuk menandai lokasi hunian.
+                                    </small>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Longitude</label>
-                                    <input type="text" name="longitude" id="inputLong" class="form-control form-control-sm" placeholder="Contoh: 112.011667" value="{{ old('longitude') }}">
+                                <div class="row g-2 mb-1">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold mb-1">Latitude</label>
+                                        <input type="text" name="latitude" id="inputLat" class="form-control form-control-sm" placeholder="-7.816667" value="{{ old('latitude') }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold mb-1">Longitude</label>
+                                        <input type="text" name="longitude" id="inputLong" class="form-control form-control-sm" placeholder="112.011667" value="{{ old('longitude') }}">
+                                    </div>
                                 </div>
-
-                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="getCurrentLocation()">
-                                    <i class="bi bi-crosshair me-1"></i> Ambil Lokasi GPS Saat Ini
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -829,26 +857,80 @@
     </form>
 </div>
 
+@push('scripts')
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
-    // Fungsi untuk berpindah tab langkah
-    function goToStep(stepId) {
-        var triggerEl = document.querySelector('#tab-' + stepId);
-        if (triggerEl) {
-            var tab = new bootstrap.Tab(triggerEl);
-            tab.show();
-            window.scrollTo({ top: 120, behavior: 'smooth' });
+    // 1. Inisialisasi Peta Leaflet OpenStreetMap
+    var defaultLat = -7.816667; // Titik Alun-Alun Kota Kediri
+    var defaultLng = 112.011667;
+
+    var inputLatVal = document.getElementById('inputLat').value;
+    var inputLongVal = document.getElementById('inputLong').value;
+
+    var startLat = inputLatVal && !isNaN(parseFloat(inputLatVal)) ? parseFloat(inputLatVal) : defaultLat;
+    var startLng = inputLongVal && !isNaN(parseFloat(inputLongVal)) ? parseFloat(inputLongVal) : defaultLng;
+    var initialZoom = (inputLatVal && inputLongVal) ? 16 : 13;
+
+    var map = L.map('mapPicker').setView([startLat, startLng], initialZoom);
+
+    // Pasang Tile Layer OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> kontributor'
+    }).addTo(map);
+
+    // Pasang Pin Marker Draggable
+    var marker = L.marker([startLat, startLng], {
+        draggable: true
+    }).addTo(map);
+
+    marker.bindPopup("<b>Titik Lokasi Rumah</b><br>Geser pin merah ini atau klik pada peta.").openPopup();
+
+    // Fungsi perbarui nilai input Latitude & Longitude
+    function updateCoordinates(lat, lng) {
+        document.getElementById('inputLat').value = lat.toFixed(6);
+        document.getElementById('inputLong').value = lng.toFixed(6);
+        marker.setPopupContent("<b>Titik Lokasi Rumah</b><br>Lat: " + lat.toFixed(6) + "<br>Long: " + lng.toFixed(6));
+    }
+
+    // Jika pin marker digeser (dragend)
+    marker.on('dragend', function (e) {
+        var pos = marker.getLatLng();
+        updateCoordinates(pos.lat, pos.lng);
+    });
+
+    // Jika peta diklik di mana saja
+    map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        updateCoordinates(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Sinkronisasi jika user mengetik manual angka di kotak input
+    function syncMapFromInputs() {
+        var lat = parseFloat(document.getElementById('inputLat').value);
+        var lng = parseFloat(document.getElementById('inputLong').value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            marker.setLatLng([lat, lng]);
+            map.panTo([lat, lng]);
+            marker.setPopupContent("<b>Titik Lokasi Rumah</b><br>Lat: " + lat.toFixed(6) + "<br>Long: " + lng.toFixed(6));
         }
     }
+    document.getElementById('inputLat').addEventListener('change', syncMapFromInputs);
+    document.getElementById('inputLong').addEventListener('change', syncMapFromInputs);
 
     // Ambil koordinat GPS saat ini menggunakan Geolocation API browser
     function getCurrentLocation() {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(function(position) {
-                document.getElementById('inputLat').value = position.coords.latitude.toFixed(6);
-                document.getElementById('inputLong').value = position.coords.longitude.toFixed(6);
-                alert("Titik koordinat berhasil diambil:\nLat: " + position.coords.latitude + "\nLong: " + position.coords.longitude);
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                updateCoordinates(lat, lng);
+                marker.setLatLng([lat, lng]);
+                map.setView([lat, lng], 17);
+                marker.openPopup();
             }, function(error) {
-                alert("Gagal mengambil lokasi GPS: " + error.message + ". Pastikan izin lokasi diizinkan di browser.");
+                alert("Gagal mengambil lokasi GPS: " + error.message + ". Pastikan izin lokasi (GPS) diaktifkan pada browser.");
             }, {
                 enableHighAccuracy: true
             });
@@ -856,5 +938,31 @@
             alert("Browser Anda tidak mendukung fitur Geolocation.");
         }
     }
+
+    // Perbaiki rendering peta saat tab Langkah 2 dibuka
+    var step2Tab = document.querySelector('#tab-step2');
+    if (step2Tab) {
+        step2Tab.addEventListener('shown.bs.tab', function () {
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 200);
+        });
+    }
+
+    // Fungsi untuk berpindah tab langkah wizard
+    function goToStep(stepId) {
+        var triggerEl = document.querySelector('#tab-' + stepId);
+        if (triggerEl) {
+            var tab = new bootstrap.Tab(triggerEl);
+            tab.show();
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+            if (stepId === 'step2') {
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 200);
+            }
+        }
+    }
 </script>
+@endpush
 @endsection
