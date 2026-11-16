@@ -201,21 +201,23 @@ flowchart TD
 ---
 
 ### Track 2 — Backend Logic, Proteksi Akses & Pemecahan Query 4 View
-- [ ] **T2.1 — Pisahkan Query Scope / Method untuk View 1, 2, dan 3 (`WargaController` / `SpkController`):**
-  - View 1 (`Daftar Usulan`): query default `status_bantuan = 0` (`Menunggu Verifikasi`), tetap hormati `visibleTo($user)`.
-  - View 2 (`Verifikasi Dinas & SPK`): fokus data untuk diverifikasi/ditetapkan Dinas (`0`, `1`, `3`, `4` dengan tab/filter jelas), sertakan data `spkRanking` dan rincian `C1`–`C5`.
-  - View 3 (`Disetujui Dinas`): hanya `status_bantuan = 2` (`STATUS_DISETUJUI`). Data dengan `status_bantuan = 5` (`STATUS_DIREALISASIKAN`) otomatis tidak muncul di View 3 karena berpindah ke View 4.
-- [ ] **T2.2 — Terapkan Otorisasi Ketat pada `WargaController`:**
-  - `show($id)`: wajib cek `visibleTo` / `WargaPolicy::view` (cegah `admin_kelurahan` A buka warga kelurahan B).
-  - `edit($id)` & `update($id)`: wajib cek `WargaPolicy::update` — tolak (`403`) jika `admin_kelurahan` mencoba edit status `2`, `4`, atau `5`, atau beda `id_wilayah`.
-  - `destroy($id)`: batasi via `WargaPolicy::delete` (hanya `superadmin`, atau sesuai aturan tim).
-  - `store()`: jika user `admin_kelurahan`, paksa `$validated['id_wilayah'] = Auth::user()->id_wilayah` di server-side.
-- [ ] **T2.3 — Perbaiki `WargaController::update()` untuk `id_program`:**
-  - Saat ini `id_program` hanya divalidasi (L465) tanpa disimpan. Tambahkan logic update `program` pada `bantuanAktif` (selama status belum `2`/`5`), atau create `Bantuan` baru jika sebelumnya belum ada.
-- [ ] **T2.4 — Terapkan Otorisasi Wilayah yang Sama di `HunianController` & `RumahController`:**
-  - Tambahkan validasi kepemilikan wilayah pada `show`, `edit`, `update`, `destroy` (atau putuskan apakah route `/hunian` & `/rumah` tetap aktif atau dipensiunkan karena sudah terpadu di `/warga`).
-- [ ] **T2.5 — Sinkronkan `SpkController@index`:**
-  - Arahkan `SpkController@index` ke view yang benar (View 2: Verifikasi Dinas & SPK) sehingga tidak memanggil `pages.spk.index` yang belum tersedia.
+- [x] **T2.1 — Pisahkan Query Scope / Method untuk View 1, 2, dan 3 (`WargaController` / `SpkController`):**
+  - View 1 (`Daftar Usulan`): query memfilter status usulan yang dipilih atau default semua usulan baru, tetap hormati `visibleTo($user)`.
+  - View 2 (`Verifikasi Dinas & SPK`): query terfokus pada data diverifikasi/ditetapkan Dinas (`0`, `1`, `3`, `4`), terintegrasi dengan perankingan SAW dan rincian `C1`–`C5`.
+  - View 3 (`Disetujui Dinas`): method `WargaController::disetujui()` hanya menampilkan `status_bantuan = 2` (`STATUS_DISETUJUI`). Data yang statusnya `5` (`STATUS_DIREALISASIKAN`) otomatis tidak muncul di View 3 dan berpindah ke View 4 Realisasi.
+- [x] **T2.2 — Terapkan Otorisasi Ketat pada `WargaController`:**
+  - `show($id)`: cek otorisasi `cannot('view', $warga)` (menolak `admin_kelurahan` beda wilayah dengan HTTP 403).
+  - `edit($id)` & `update($id)`: cek otorisasi `cannot('update', $warga)` — tolak (`403`) jika `admin_kelurahan` mencoba edit status `2`, `4`, `5` atau beda `id_wilayah`.
+  - `destroy($id)`: dibatasi via `cannot('delete', $warga)` (hanya `superadmin` yang lolos, role lain tolak 403).
+  - `store()`: validasi `cannot('create', Warga::class)` dan jika user `admin_kelurahan`, server-side otomatis memaksakan `$validated['id_wilayah'] = Auth::user()->id_wilayah`.
+- [x] **T2.3 — Perbaiki `WargaController::update()` untuk `id_program`:**
+  - Menambahkan logic pembaruan jenis bantuan pada `bantuanAktif` (selama belum berstatus Disetujui `2` atau Realisasi `5`), serta membuat record `Bantuan` baru jika sebelumnya warga belum memiliki usulan bantuan.
+- [x] **T2.4 — Terapkan Otorisasi Wilayah yang Sama di `HunianController` & `RumahController`:**
+  - `HunianController`: validasi otorisasi wilayah pada `store` (cek warga), `show` (cek warga), `edit` & `update` (cek wilayah & status editable kelurahan), serta `destroy` (hanya `superadmin`).
+  - `RumahController`: validasi otorisasi wilayah pada `store` (cek warga), `show` (cek warga), `edit` & `update` (cek wilayah & status editable kelurahan), serta `destroy` (hanya `superadmin`).
+- [x] **T2.5 — Sinkronkan `SpkController@index` & Hitung SPK pada Data Terverifikasi:**
+  - `SpkController@index`: mengarahkan langsung (*redirect*) ke data warga yang sudah diverifikasi (`route('warga.index', ['status_bantuan' => 1, 'tab' => 'spk', 'sort' => 'rank_asc'])`).
+  - `SawRankingService::hitungDanSimpan()`: dikonfigurasi khusus hanya menghitung perankingan SAW untuk data usulan yang **sudah diverifikasi** (`status_bantuan = 1` / `STATUS_DIVERIFIKASI` dan `STATUS_DISETUJUI`), sehingga data usulan mentah (status 0) tidak mencemari perangkingan SPK.
 
 ---
 

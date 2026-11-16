@@ -26,12 +26,12 @@ class WargaPolicy
 
     public function create(User $user): bool
     {
-        return $user->isSuperadmin() || $user->isAdminKelurahan();
+        return $user->isSuperadmin() || $user->isAdminKelurahan() || $user->isAdminDinas();
     }
 
     public function update(User $user, Warga $warga): bool
     {
-        if ($user->isSuperadmin()) {
+        if ($user->isSuperadmin() || $user->isAdminDinas()) {
             return true;
         }
 

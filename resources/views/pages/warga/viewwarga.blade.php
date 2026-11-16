@@ -376,28 +376,35 @@
             </span>
         </div>
 
+        @php
+            $currentTab = request('tab', 'master');
+            if (!$isDinas && $currentTab === 'spk') {
+                $currentTab = 'master';
+            }
+        @endphp
+
         <!-- Toolbar Tab Navigasi Pills Mandiri -->
         <div class="bg-light px-3 py-2 border-bottom">
             <ul class="nav nav-pills nav-pills-custom gap-2 mb-0" id="tableTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="tab-master" data-bs-toggle="pill" data-bs-target="#content-master" type="button" role="tab">
+                    <button class="nav-link {{ $currentTab === 'master' ? 'active' : '' }}" id="tab-master" data-bs-toggle="pill" data-bs-target="#content-master" type="button" role="tab">
                         <i class="bi bi-grid-fill me-1"></i> 1. Ringkasan Terpadu
                     </button>
                 </li>
                 @if($isDinas)
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-spk" data-bs-toggle="pill" data-bs-target="#content-spk" type="button" role="tab">
+                        <button class="nav-link {{ $currentTab === 'spk' ? 'active' : '' }}" id="tab-spk" data-bs-toggle="pill" data-bs-target="#content-spk" type="button" role="tab">
                             <i class="bi bi-award-fill me-1 text-warning"></i> 2. Prioritas SAW & Verifikasi Dinas
                         </button>
                     </li>
                 @endif
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-hunian" data-bs-toggle="pill" data-bs-target="#content-hunian" type="button" role="tab">
+                    <button class="nav-link {{ $currentTab === 'hunian' ? 'active' : '' }}" id="tab-hunian" data-bs-toggle="pill" data-bs-target="#content-hunian" type="button" role="tab">
                         <i class="bi bi-geo-alt-fill me-1"></i> {{ $isDinas ? '3' : '2' }}. Kepemilikan Hunian & Lahan
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-fisik" data-bs-toggle="pill" data-bs-target="#content-fisik" type="button" role="tab">
+                    <button class="nav-link {{ $currentTab === 'fisik' ? 'active' : '' }}" id="tab-fisik" data-bs-toggle="pill" data-bs-target="#content-fisik" type="button" role="tab">
                         <i class="bi bi-bricks me-1"></i> {{ $isDinas ? '4' : '3' }}. Survei Konstruksi & Sanitasi
                     </button>
                 </li>
@@ -409,7 +416,7 @@
             <div class="tab-content" id="tableTabsContent">
 
                 <!-- ================= TAB 1: RINGKASAN TERPADU ================= -->
-                <div class="tab-pane fade show active" id="content-master" role="tabpanel">
+                <div class="tab-pane fade {{ $currentTab === 'master' ? 'show active' : '' }}" id="content-master" role="tabpanel">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
                             <thead>
@@ -606,7 +613,7 @@
 
                 <!-- ================= TAB 2: PRIORITAS SPK SAW & VERIFIKASI DINAS (KHUSUS DINAS) ================= -->
                 @if($isDinas)
-                <div class="tab-pane fade" id="content-spk" role="tabpanel">
+                <div class="tab-pane fade {{ $currentTab === 'spk' ? 'show active' : '' }}" id="content-spk" role="tabpanel">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
                             <thead>
@@ -712,9 +719,11 @@
                                                     </button>
                                                 @endif
 
-                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Verifikasi Dinas">
-                                                    <i class="bi bi-check2-square"></i> Verifikasi
-                                                </button>
+                                                @if($bantuan)
+                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Verifikasi Dinas">
+                                                        <i class="bi bi-check2-square"></i> Verifikasi
+                                                    </button>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -732,7 +741,7 @@
                 @endif
 
                 <!-- ================= TAB: DETAIL KEPEMILIKAN HUNIAN ================= -->
-                <div class="tab-pane fade" id="content-hunian" role="tabpanel">
+                <div class="tab-pane fade {{ $currentTab === 'hunian' ? 'show active' : '' }}" id="content-hunian" role="tabpanel">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
                             <thead>
@@ -825,9 +834,9 @@
                 </div>
 
                 <!-- ================= TAB: DETAIL FISIK & SANITASI ================= -->
-                <div class="tab-pane fade" id="content-fisik" role="tabpanel">
+                <div class="tab-pane fade {{ $currentTab === 'fisik' ? 'show active' : '' }}" id="content-fisik" role="tabpanel">
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
+                        <table class="table table-hover table-striped mb-0 align-justify table-terpadu">
                             <thead>
                                 <tr>
                                     <th class="ps-4" style="width: 50px;">No</th>

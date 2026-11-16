@@ -64,8 +64,8 @@ class WargaController extends Controller
         }
 
         // Fitur Filter Status Bantuan / Verifikasi Dinas
-        if ($request->filled('status_bantuan')) {
-            $statusBantuan = $request->input('status_bantuan');
+        if ($request->has('status_bantuan') && $request->input('status_bantuan') !== '' && $request->input('status_bantuan') !== null) {
+            $statusBantuan = (int) $request->input('status_bantuan');
             $query->whereHas('bantuanAktif', function ($q) use ($statusBantuan) {
                 $q->where('status_bantuan', $statusBantuan);
             });
@@ -127,6 +127,28 @@ class WargaController extends Controller
         $viewName = view()->exists('pages.warga.viewwarga') ? 'pages.warga.viewwarga' : 'pages.warga.index';
 
         return view($viewName, compact('wargas', 'wilayahs', 'programs'));
+    }
+
+    /**
+     * View 3: Menampilkan daftar calon penerima bantuan yang telah disetujui Dinas (SK).
+     */
+    public function disetujui(Request $request)
+    {
+        $query = $this->buildWargaQuery($request);
+
+        // Hanya tampilkan status Disetujui Dinas (2); data yang sudah direalisasikan (5) otomatis berpindah ke View 4
+        $query->whereHas('bantuanAktif', function ($q) {
+            $q->where('status_bantuan', Bantuan::STATUS_DISETUJUI);
+        });
+
+        $wargas = $query->paginate(10)->withQueryString();
+        $wilayahs = Wilayah::orderBy('desa')->get();
+        $programs = ProgramBantuan::orderBy('nama_program')->get();
+        $isViewDisetujui = true;
+
+        $viewName = view()->exists('pages.warga.disetujui') ? 'pages.warga.disetujui' : 'pages.warga.viewwarga';
+
+        return view($viewName, compact('wargas', 'wilayahs', 'programs', 'isViewDisetujui'));
     }
 
     /**
@@ -260,6 +282,15 @@ class WargaController extends Controller
             'id_wilayah.required'=> 'Pilihan Kelurahan / Wilayah wajib dipilih.',
             'kawin.required'     => 'Status perkawinan wajib dipilih.',
         ]);
+
+        if (Auth::check() && Auth::user()->cannot('create', Warga::class)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang untuk menambahkan calon penerima.');
+        }
+
+        // T2.2: Jika user admin_kelurahan, paksa id_wilayah sesuai wilayah user
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            $validated['id_wilayah'] = Auth::user()->id_wilayah;
+        }
 
         DB::beginTransaction();
         try {
@@ -408,6 +439,11 @@ class WargaController extends Controller
             'Bantuan.program'
         ])->findOrFail($id);
 
+        // T2.2: Otorisasi cek hak akses lihat warga
+        if (Auth::check() && Auth::user()->cannot('view', $warga)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki hak akses untuk melihat data warga di luar wilayah kelurahan Anda.');
+        }
+
         return view('pages.warga.show', compact('warga'));
     }
 
@@ -420,8 +456,14 @@ class WargaController extends Controller
             'wilayah',
             'Dokumen',
             'Hunian.Rumah.Utilitas',
-            'Hunian.Rumah.DokumenRumah'
+            'Hunian.Rumah.DokumenRumah',
+            'bantuanAktif'
         ])->findOrFail($id);
+
+        // T2.2: Otorisasi cek hak akses edit warga
+        if (Auth::check() && Auth::user()->cannot('update', $warga)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data warga ini atau status bantuan sudah terkunci.');
+        }
 
         $wilayahs = Wilayah::orderBy('desa')->get();
 
@@ -433,7 +475,12 @@ class WargaController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $warga = Warga::with(['Dokumen', 'Hunian.Rumah.Utilitas', 'Hunian.Rumah.DokumenRumah'])->findOrFail($id);
+        $warga = Warga::with(['Dokumen', 'Hunian.Rumah.Utilitas', 'Hunian.Rumah.DokumenRumah', 'bantuanAktif'])->findOrFail($id);
+
+        // T2.2: Otorisasi cek hak akses update warga
+        if (Auth::check() && Auth::user()->cannot('update', $warga)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang untuk memperbarui data warga ini atau status bantuan sudah terkunci.');
+        }
 
         $validated = $request->validate([
             // Kependudukan
@@ -517,6 +564,11 @@ class WargaController extends Controller
             'foto_lantai'    => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
             'foto_mck'       => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
+
+        // T2.2: Jika user admin_kelurahan, paksa id_wilayah sesuai wilayahnya
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            $validated['id_wilayah'] = Auth::user()->id_wilayah;
+        }
 
         DB::beginTransaction();
         try {
@@ -650,6 +702,29 @@ class WargaController extends Controller
                 }
             }
 
+            // 7. Perbarui program bantuan pada bantuanAktif atau buat baru jika belum ada (T2.3)
+            if (!empty($validated['id_program'])) {
+                $bantuanAktif = $warga->bantuanAktif;
+                if ($bantuanAktif) {
+                    // Hanya boleh update jenis program jika status belum Disetujui (2) atau Direalisasikan (5)
+                    if (!in_array((int) $bantuanAktif->status_bantuan, [Bantuan::STATUS_DISETUJUI, Bantuan::STATUS_DIREALISASIKAN], true)) {
+                        $bantuanAktif->update([
+                            'id_program' => $validated['id_program'],
+                        ]);
+                    }
+                } else {
+                    Bantuan::create([
+                        'id_warga' => $warga->id_warga,
+                        'id_program' => $validated['id_program'],
+                        'tahun_bantuan' => (int) date('Y'),
+                        'id_user_pengajuan' => Auth::id() ?? 1,
+                        'tgl_pengajuan' => now(),
+                        'status_bantuan' => Bantuan::STATUS_DIAJUKAN,
+                        'is_aktif' => true,
+                    ]);
+                }
+            }
+
             DB::commit();
 
             // Otomatis hitung ulang perankingan SAW untuk seluruh data terpadu
@@ -674,6 +749,11 @@ class WargaController extends Controller
     public function destroy(string $id)
     {
         $warga = Warga::with(['Dokumen', 'Hunian.Rumah.DokumenRumah'])->findOrFail($id);
+
+        // T2.2: Otorisasi cek hak akses hapus warga (hanya superadmin)
+        if (Auth::check() && Auth::user()->cannot('delete', $warga)) {
+            abort(403, 'Akses Ditolak: Hanya Superadmin yang berwenang menghapus data master warga.');
+        }
 
         DB::beginTransaction();
         try {

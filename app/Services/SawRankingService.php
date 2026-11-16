@@ -14,11 +14,12 @@ class SawRankingService
      * 
      * @param int $tahun
      * @param int|null $idProgram
+     * @param array $statuses
      * @return array
      */
-    public function hitungDanSimpan(int $tahun, ?int $idProgram = null): array
+    public function hitungDanSimpan(int $tahun, ?int $idProgram = null, array $statuses = [Bantuan::STATUS_DIVERIFIKASI, Bantuan::STATUS_DISETUJUI]): array
     {
-        // 1. Ambil data usulan bantuan aktif untuk tahun bersangkutan
+        // 1. Ambil data usulan bantuan aktif yang SUDAH DIVERIFIKASI untuk tahun bersangkutan
         // Memuat relasi terpadu: warga, hunian, rumah, dan utilitas
         $query = Bantuan::with([
             'warga.wilayah',
@@ -26,7 +27,8 @@ class SawRankingService
             'program',
         ])
         ->where('tahun_bantuan', $tahun)
-        ->where('is_aktif', true);
+        ->where('is_aktif', true)
+        ->whereIn('status_bantuan', $statuses);
 
         if ($idProgram) {
             $query->where('id_program', $idProgram);
@@ -37,7 +39,7 @@ class SawRankingService
         if ($bantuans->isEmpty()) {
             return [
                 'success' => false,
-                'message' => "Tidak ada data usulan bantuan aktif pada tahun anggaran {$tahun}.",
+                'message' => "Tidak ada data usulan bantuan yang sudah diverifikasi pada tahun anggaran {$tahun}.",
                 'total' => 0,
             ];
         }

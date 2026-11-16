@@ -142,6 +142,14 @@ class RumahController extends Controller
             'id_warga.exists'   => 'Data warga yang dipilih tidak valid.',
         ]);
 
+        // T2.4: Otorisasi wilayah jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            $warga = Warga::findOrFail($validated['id_warga']);
+            if ((int) $warga->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak dapat menambahkan survei rumah untuk warga di luar wilayah kelurahan Anda.');
+            }
+        }
+
         DB::beginTransaction();
         try {
             // 1. Simpan atau perbarui entitas Hunian untuk warga ini
@@ -232,6 +240,13 @@ class RumahController extends Controller
         $rumah = Rumah::with(['hunian.warga.wilayah', 'Utilitas', 'DokumenRumah'])
             ->findOrFail($id);
 
+        // T2.4: Otorisasi wilayah jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if ((int) $rumah->hunian?->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki akses ke data survei rumah di luar wilayah Anda.');
+            }
+        }
+
         return view('pages.rumah.show', compact('rumah'));
     }
 
@@ -240,8 +255,19 @@ class RumahController extends Controller
      */
     public function edit(string $id)
     {
-        $rumah = Rumah::with(['hunian.warga', 'Utilitas', 'DokumenRumah'])
+        $rumah = Rumah::with(['hunian.warga.bantuanAktif', 'Utilitas', 'DokumenRumah'])
             ->findOrFail($id);
+
+        // T2.4: Otorisasi wilayah & status jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if ((int) $rumah->hunian?->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data rumah di luar wilayah Anda.');
+            }
+            $bantuan = $rumah->hunian?->warga?->bantuanAktif;
+            if ($bantuan && !in_array((int) $bantuan->status_bantuan, \App\Models\Bantuan::STATUS_EDITABLE_KELURAHAN, true)) {
+                abort(403, 'Akses Ditolak: Data survei rumah untuk warga dengan status ini sudah terkunci.');
+            }
+        }
 
         return view('pages.rumah.edit', compact('rumah'));
     }
@@ -251,7 +277,18 @@ class RumahController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $rumah = Rumah::with(['hunian', 'Utilitas', 'DokumenRumah'])->findOrFail($id);
+        $rumah = Rumah::with(['hunian.warga.bantuanAktif', 'Utilitas', 'DokumenRumah'])->findOrFail($id);
+
+        // T2.4: Otorisasi wilayah & status jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if ((int) $rumah->hunian?->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data rumah di luar wilayah Anda.');
+            }
+            $bantuan = $rumah->hunian?->warga?->bantuanAktif;
+            if ($bantuan && !in_array((int) $bantuan->status_bantuan, \App\Models\Bantuan::STATUS_EDITABLE_KELURAHAN, true)) {
+                abort(403, 'Akses Ditolak: Data survei rumah untuk warga dengan status ini sudah terkunci.');
+            }
+        }
 
         $validated = $request->validate([
             // Data Hunian & Lahan
@@ -403,6 +440,11 @@ class RumahController extends Controller
      */
     public function destroy(string $id)
     {
+        // T2.4: Hanya superadmin yang berwenang menghapus data survei rumah
+        if (!Auth::check() || !Auth::user()->isSuperadmin()) {
+            abort(403, 'Akses Ditolak: Hanya Superadmin yang berwenang menghapus data survei rumah.');
+        }
+
         $rumah = Rumah::with(['DokumenRumah', 'Utilitas', 'hunian'])->findOrFail($id);
 
         DB::beginTransaction();

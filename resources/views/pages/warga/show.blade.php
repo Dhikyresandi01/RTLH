@@ -61,7 +61,7 @@
             <!-- Profil Card -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body text-center p-4">
-                    <div class="avatar bg-light-primary text-primary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px;">
+                    <div class="avatar bg-light-primary text-primary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
                         <i class="bi bi-person-fill fs-1"></i>
                     </div>
                     <h5 class="fw-bold mb-1 text-dark">{{ $warga->nama }}</h5>

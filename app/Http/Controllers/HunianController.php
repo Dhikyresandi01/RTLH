@@ -111,6 +111,14 @@ class HunianController extends Controller
         $validated['jml_kk'] = $validated['jml_kk'] ?? 1;
         $validated['jml_penghuni'] = $validated['jml_penghuni'] ?? 1;
 
+        // T2.4: Otorisasi wilayah jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            $warga = Warga::findOrFail($validated['id_warga']);
+            if ((int) $warga->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak dapat menambahkan hunian untuk warga di luar wilayah kelurahan Anda.');
+            }
+        }
+
         Hunian::create($validated);
 
         return redirect()->route('hunian.index')
@@ -125,6 +133,13 @@ class HunianController extends Controller
         $hunian = Hunian::with(['warga.wilayah', 'Rumah.Utilitas', 'Rumah.DokumenRumah'])
             ->findOrFail($id);
 
+        // T2.4: Otorisasi cek wilayah jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if ((int) $hunian->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki akses ke data hunian di luar wilayah Anda.');
+            }
+        }
+
         return view('pages.hunian.show', compact('hunian'));
     }
 
@@ -133,7 +148,18 @@ class HunianController extends Controller
      */
     public function edit(string $id)
     {
-        $hunian = Hunian::with('warga')->findOrFail($id);
+        $hunian = Hunian::with('warga.bantuanAktif')->findOrFail($id);
+
+        // T2.4: Otorisasi wilayah & status jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if ((int) $hunian->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data hunian di luar wilayah Anda.');
+            }
+            $bantuan = $hunian->warga?->bantuanAktif;
+            if ($bantuan && !in_array((int) $bantuan->status_bantuan, \App\Models\Bantuan::STATUS_EDITABLE_KELURAHAN, true)) {
+                abort(403, 'Akses Ditolak: Data hunian untuk warga dengan status ini sudah terkunci.');
+            }
+        }
 
         $wargaQuery = Warga::with('wilayah');
         if (Auth::check()) {
@@ -149,7 +175,18 @@ class HunianController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $hunian = Hunian::findOrFail($id);
+        $hunian = Hunian::with('warga.bantuanAktif')->findOrFail($id);
+
+        // T2.4: Otorisasi wilayah & status jika user admin_kelurahan
+        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if ((int) $hunian->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data hunian di luar wilayah Anda.');
+            }
+            $bantuan = $hunian->warga?->bantuanAktif;
+            if ($bantuan && !in_array((int) $bantuan->status_bantuan, \App\Models\Bantuan::STATUS_EDITABLE_KELURAHAN, true)) {
+                abort(403, 'Akses Ditolak: Data hunian untuk warga dengan status ini sudah terkunci.');
+            }
+        }
 
         $validated = $request->validate([
             'id_warga'      => ['required', 'exists:warga,id_warga'],
@@ -184,6 +221,11 @@ class HunianController extends Controller
      */
     public function destroy(string $id)
     {
+        // T2.4: Hanya superadmin yang berwenang menghapus data hunian
+        if (!Auth::check() || !Auth::user()->isSuperadmin()) {
+            abort(403, 'Akses Ditolak: Hanya Superadmin yang berwenang menghapus data hunian.');
+        }
+
         $hunian = Hunian::with('Rumah.DokumenRumah')->findOrFail($id);
 
         DB::beginTransaction();
