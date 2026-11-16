@@ -30,20 +30,39 @@
                     </a>
                 </li>
 
-                <li class="sidebar-title">Pendataan & Survei</li>
+                <li class="sidebar-title">Pendataan &amp; Verifikasi</li>
 
-                <li class="sidebar-item {{ request()->is('warga*') ? 'active' : '' }}">
-                    <a href="{{ route('warga') }}" class='sidebar-link d-flex justify-content-between align-items-center'>
+                <li class="sidebar-item {{ request()->routeIs('warga.index', 'warga.create', 'warga.show', 'warga.edit') ? 'active' : '' }}">
+                    <a href="{{ route('warga.index') }}" class='sidebar-link d-flex justify-content-between align-items-center'>
                         <div>
                             <i class="bi bi-people-fill"></i>
-                            <span>Data Calon Penerima</span>
+                            <span>Daftar Usulan</span>
                         </div>
-                        <span class="badge bg-primary rounded-pill small" style="font-size: 0.65rem;">Terpadu</span>
+                        <span class="badge bg-primary rounded-pill small" style="font-size: 0.65rem;">Usulan</span>
                     </a>
                 </li>
 
-                @if(Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas())
-                <li class="sidebar-title">Pelaksanaan & Bantuan</li>
+                <li class="sidebar-item {{ request()->is('spk*', 'verifikasi*') ? 'active' : '' }}">
+                    <a href="{{ route('spk.index') }}" class='sidebar-link d-flex justify-content-between align-items-center'>
+                        <div>
+                            <i class="bi bi-shield-check"></i>
+                            <span>Verifikasi &amp; SPK</span>
+                        </div>
+                        <span class="badge bg-warning text-dark rounded-pill small" style="font-size: 0.65rem;">SAW</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-title">Penetapan &amp; Pelaksanaan</li>
+
+                <li class="sidebar-item {{ request()->routeIs('warga.disetujui') || request()->is('penerima-disetujui*') ? 'active' : '' }}">
+                    <a href="{{ route('warga.disetujui') }}" class='sidebar-link d-flex justify-content-between align-items-center'>
+                        <div>
+                            <i class="bi bi-patch-check-fill"></i>
+                            <span>Penerima Disetujui</span>
+                        </div>
+                        <span class="badge bg-info text-dark rounded-pill small" style="font-size: 0.65rem;">SK</span>
+                    </a>
+                </li>
 
                 <li class="sidebar-item {{ request()->is('realisasi*') ? 'active' : '' }}">
                     <a href="{{ route('realisasi.index') }}" class='sidebar-link d-flex justify-content-between align-items-center'>
@@ -54,9 +73,8 @@
                         <span class="badge bg-success rounded-pill small" style="font-size: 0.65rem;">Progres</span>
                     </a>
                 </li>
-                @endif
 
-                @if(Auth::user()->isSuperadmin())
+                @if(Auth::check() && Auth::user()->isSuperadmin())
                 <li class="sidebar-title">Master Data</li>
                 <li class="sidebar-item {{ request()->is('program-bantuan*') ? 'active' : '' }}">
                     <a href="{{ route('program-bantuan.index') }}" class='sidebar-link'>

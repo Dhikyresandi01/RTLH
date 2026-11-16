@@ -48,21 +48,21 @@ Route::middleware('auth')->group(function () {
         Route::resource('program-bantuan', ProgramBantuanController::class)->except(['show', 'create', 'edit']);
     });
 
-    // View 2 (Verifikasi Dinas & SPK SAW) & View 4 (Realisasi Bantuan) — Khusus Superadmin & Admin Dinas
-    Route::middleware('role:superadmin,admin_dinas')->group(function () {
-        // Alias /verifikasi -> redirect ke /spk
-        Route::get('/verifikasi', function (Request $request) {
-            return redirect()->route('spk.index', $request->query());
-        })->name('verifikasi.index');
+    // View 2 (Verifikasi Dinas & SPK SAW) & View 4 (Realisasi Bantuan) — Akses Baca Semua Role (Kelurahan View-Only Wilayahnya)
+    Route::get('/verifikasi', function (Request $request) {
+        return redirect()->route('spk.index', $request->query());
+    })->name('verifikasi.index');
+    Route::get('/spk', [SpkController::class, 'index'])->name('spk.index');
+    Route::get('/realisasi', [RealisasiController::class, 'index'])->name('realisasi.index');
 
+    // Aksi Mutasi View 2 & View 4 — Khusus Superadmin & Admin Dinas
+    Route::middleware('role:superadmin,admin_dinas')->group(function () {
         // SPK Simple Additive Weighting & Verifikasi Dinas
-        Route::get('/spk', [SpkController::class, 'index'])->name('spk.index');
         Route::post('/spk/hitung', [SpkController::class, 'hitung'])->name('spk.hitung');
         Route::post('/spk/kriteria', [SpkController::class, 'updateKriteria'])->name('spk.kriteria.update');
         Route::post('/spk/verifikasi/{id_bantuan}', [SpkController::class, 'verifikasiDinas'])->name('spk.verifikasi');
 
         // Realisasi & Penyaluran Bantuan
-        Route::get('/realisasi', [RealisasiController::class, 'index'])->name('realisasi.index');
         Route::post('/realisasi/{id_bantuan}', [RealisasiController::class, 'storeOrUpdate'])->name('realisasi.update');
         Route::delete('/realisasi/{id_realisasi}', [RealisasiController::class, 'destroy'])->name('realisasi.destroy');
     });

@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Dashboard') | E-RTLH Kota Kediri</title>
 
+    <link rel="preload" href="{{ asset('assets/vendors/bootstrap-icons/fonts/bootstrap-icons.woff2?4601c71fb26c9277391ec80789bfde9c') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ asset('assets/vendors/iconly/fonts/Iconly---Bold.woff?jilz72') }}" as="font" type="font/woff" crossorigin>
+
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.css') }}">

@@ -26,7 +26,7 @@
             <div class="col-12 col-md-7">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{{ route('warga') }}">Data Calon Penerima</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('warga.index') }}">Daftar Usulan</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Formulir Terpadu RTLH</li>
                     </ol>
                 </nav>
@@ -34,7 +34,7 @@
                 <p class="text-muted small mb-0">Pendataan lengkap: Identitas Warga, Status Kepemilikan Hunian, dan Survei Fisik Konstruksi Bangunan dalam satu form.</p>
             </div>
             <div class="col-12 col-md-5 text-md-end mt-3 mt-md-0">
-                <a href="{{ route('warga') }}" class="btn btn-outline-secondary shadow-sm">
+                <a href="{{ route('warga.index') }}" class="btn btn-outline-secondary shadow-sm">
                     <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar
                 </a>
             </div>
@@ -189,15 +189,28 @@
 
                                     <div class="col-12 col-md-6">
                                         <label class="form-label fw-semibold">Kelurahan / Wilayah <span class="text-danger">*</span></label>
-                                        <select name="id_wilayah" class="form-select @error('id_wilayah') is-invalid @enderror" required>
-                                            <option value="">-- Pilih Kelurahan --</option>
-                                            @foreach($wilayahs as $wilayah)
-                                                <option value="{{ $wilayah->id_wilayah }}" {{ old('id_wilayah') == $wilayah->id_wilayah ? 'selected' : '' }}>
-                                                    {{ $wilayah->desa }} (Kec. {{ $wilayah->kecamatan }})
+                                        @if(Auth::check() && Auth::user()->isAdminKelurahan())
+                                            @php
+                                                $userWilayah = $wilayahs->firstWhere('id_wilayah', Auth::user()->id_wilayah);
+                                            @endphp
+                                            <select class="form-select bg-light @error('id_wilayah') is-invalid @enderror" disabled>
+                                                <option selected>
+                                                    {{ $userWilayah ? $userWilayah->desa . ' (Kec. ' . $userWilayah->kecamatan . ')' : (Auth::user()->wilayah->desa ?? 'Wilayah Kelurahan Anda') }}
                                                 </option>
-                                            @endforeach
-                                        </select>
-                                        @error('id_wilayah') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </select>
+                                            <input type="hidden" name="id_wilayah" value="{{ Auth::user()->id_wilayah }}">
+                                            <small class="text-muted"><i class="bi bi-lock-fill me-1"></i>Terkunci otomatis sesuai wilayah kelurahan Anda</small>
+                                        @else
+                                            <select name="id_wilayah" class="form-select @error('id_wilayah') is-invalid @enderror" required>
+                                                <option value="">-- Pilih Kelurahan --</option>
+                                                @foreach($wilayahs as $wilayah)
+                                                    <option value="{{ $wilayah->id_wilayah }}" {{ old('id_wilayah') == $wilayah->id_wilayah ? 'selected' : '' }}>
+                                                        {{ $wilayah->desa }} (Kec. {{ $wilayah->kecamatan }})
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        @endif
+                                        @error('id_wilayah') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                     </div>
 
                                     <div class="col-12 col-md-6">

@@ -26,7 +26,7 @@
             <div class="col-12 col-md-7">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{{ route('warga') }}">Data Calon Penerima</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('warga.index') }}">Daftar Usulan</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Detail Profil Terpadu</li>
                     </ol>
                 </nav>
@@ -34,12 +34,14 @@
                 <p class="text-muted small mb-0">NIK: {{ $warga->nik }} | No. KK: {{ $warga->no_kk }} | Kelurahan {{ $warga->wilayah->desa ?? '-' }}</p>
             </div>
             <div class="col-12 col-md-5 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
-                <a href="{{ route('warga') }}" class="btn btn-outline-secondary">
+                <a href="{{ route('warga.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i> Kembali
                 </a>
-                <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-warning shadow-sm">
-                    <i class="bi bi-pencil me-1"></i> Edit Data
-                </a>
+                @can('update', $warga)
+                    <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-warning shadow-sm">
+                        <i class="bi bi-pencil me-1"></i> Edit Data
+                    </a>
+                @endcan
                 <button type="button" class="btn btn-primary shadow-sm" onclick="window.print()">
                     <i class="bi bi-printer-fill me-1"></i> Cetak Profil
                 </button>
@@ -53,6 +55,7 @@
         $utilitas = $rumah?->Utilitas->first();
         $dokumenWarga = $warga->Dokumen;
         $dokumenRumah = $rumah?->DokumenRumah ?? collect();
+        $bantuan = $warga->bantuanAktif ?? $warga->Bantuan?->firstWhere('is_aktif', true);
     @endphp
 
     <div class="row">
@@ -70,7 +73,7 @@
                         {{ $warga->wilayah->desa ?? '-' }}, Kec. {{ $warga->wilayah->kecamatan ?? '-' }}
                     </p>
 
-                    <div class="d-flex justify-content-center gap-2 mb-3">
+                    <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
                         @if($warga->status_update == 1)
                             <span class="badge bg-success py-2 px-3"><i class="bi bi-check-circle-fill me-1"></i>Terverifikasi</span>
                         @else
@@ -79,6 +82,29 @@
 
                         @if($warga->mampu_swadaya)
                             <span class="badge bg-info text-white py-2 px-3"><i class="bi bi-hand-thumbs-up-fill me-1"></i>Swadaya</span>
+                        @endif
+                    </div>
+
+                    <div class="bg-light rounded p-3 text-start mb-3 border">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted fw-semibold">Status Usulan Bantuan:</span>
+                            <div>
+                                @include('pages.warga.partials._status_badge', ['bantuan' => $bantuan])
+                            </div>
+                        </div>
+                        <div class="small text-muted">
+                            Program: <strong class="text-dark">{{ $bantuan?->program?->nama_program ?? 'Belum Ditentukan' }}</strong>
+                        </div>
+                        @if($bantuan?->verifikator)
+                            <div class="small text-muted">
+                                Verifikator: <strong class="text-dark">{{ $bantuan->verifikator->name }}</strong>
+                            </div>
+                        @endif
+                        @if($bantuan?->catatan_verifikasi)
+                            <div class="mt-2 pt-2 border-top small text-dark">
+                                <span class="text-muted d-block fw-semibold mb-1"><i class="bi bi-chat-left-text me-1"></i>Catatan Verifikator:</span>
+                                {{ $bantuan->catatan_verifikasi }}
+                            </div>
                         @endif
                     </div>
 

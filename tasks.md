@@ -136,9 +136,9 @@ Dokumen ini berisi hasil audit teknis codebase **E-RTLH Kota Kediri**, temuan fu
 | View | Nama Halaman / Fokus | Filter Status Default (`bantuan.status_bantuan`) | Akses Role & Perilaku |
 | :--- | :--- | :--- | :--- |
 | **View 1** | **Daftar Usulan** *(Input & Monitoring Usulan Kelurahan)* | **`0` (Menunggu Verifikasi)** *(+ opsi filter/lihat status `3` Perlu Revisi & `4` Ditolak jika kelurahan perlu pantau/perbaiki usulan)* | • **`admin_kelurahan`**: Input baru (wilayah terkunci ke kelurahannya), edit data saat status `0`, `1`, `3`. View-only saat `2`, `4`, `5`.<br>• **`admin_dinas` & `superadmin`**: Melihat usulan masuk lintas kelurahan; `superadmin` bisa hapus. |
-| **View 2** | **Verifikasi Dinas & SPK SAW** | **Fokus Verifikasi Dinas**: Antrean `0` (untuk diverifikasi) & **`1` (Diverifikasi)** *(serta `3` Perlu Revisi / `4` Ditolak dari hasil verifikasi)* | • **`admin_dinas` & `superadmin`**: Menjalankan *Hitung Ulang SAW*, melihat rincian skor `C1`–`C5`, mengubah status keputusan (`1=Diverifikasi`, `2=Disetujui`, `3=Revisi`, `4=Ditolak`) + catatan wajib.<br>• **`admin_kelurahan`**: Tidak mengakses panel keputusan SPK/Verifikasi Dinas (kecuali edit perbaikan data bila berstatus `3` Perlu Revisi / `1` Diverifikasi / `0` Menunggu Verifikasi). |
-| **View 3** | **Calon Penerima Disetujui Dinas** | **`2` (Disetujui Dinas)** *(Otomatis keluar dari View 3 & pindah ke View 4 saat status menjadi `5` Direalisasikan)* | • **`admin_dinas` & `superadmin`**: Bisa memperbarui data/keputusan terkait penetapan sebelum realisasi selesai.<br>• **`admin_kelurahan`**: **View-Only** (hanya lihat daftar & detail warga di wilayahnya, tombol Edit/Hapus disembunyikan). |
-| **View 4** | **Realisasi & Progres Bantuan** | **`2` (Disetujui Dinas)** *(progres 0–50%)* & **`5` (Direalisasikan)** *(progres 100%)* | • **`admin_dinas` & `superadmin`**: Update progres `0% / 25% / 50% / 100%`, upload foto bertahap & kuitansi SPJ. Saat `100%`, status otomatis menjadi `5` (`Direalisasikan`).<br>• **`admin_kelurahan`**: Tidak bisa update realisasi (opsional: bila diizinkan lihat di wilayahnya, harus view-only; saat ini `RealisasiController` memblokir `403` untuk kelurahan). |
+| **View 2** | **Verifikasi Dinas & SPK SAW** | **Fokus Verifikasi Dinas**: Antrean `0` (untuk diverifikasi) & **`1` (Diverifikasi)** *(serta `3` Perlu Revisi / `4` Ditolak dari hasil verifikasi)* | • **`admin_dinas` & `superadmin`**: Menjalankan *Hitung Ulang SAW*, ubah bobot kriteria, melihat rincian skor `C1`–`C5`, mengubah status keputusan (`1=Diverifikasi`, `2=Disetujui`, `3=Revisi`, `4=Ditolak`) + catatan wajib.<br>• **`admin_kelurahan`**: **View-Only Keputusan SPK** untuk wilayahnya sendiri (lihat peringkat SAW, rincian skor `C1`–`C5`, status & catatan verifikator; tombol *Hitung Ulang SAW*, *Bobot Kriteria*, dan *Verifikasi Dinas* disembunyikan; boleh edit data usulan hanya saat status `0`, `1`, `3`). |
+| **View 3** | **Calon Penerima Disetujui Dinas** | **`2` (Disetujui Dinas)** *(Otomatis keluar dari View 3 & pindah ke View 4 saat status menjadi `5` Direalisasikan)* | • **`admin_dinas` & `superadmin`**: Bisa memperbarui keputusan verifikasi sebelum realisasi selesai.<br>• **`admin_kelurahan`**: **View-Only** (hanya lihat daftar & detail warga di wilayahnya, tombol Edit/Hapus disembunyikan). |
+| **View 4** | **Realisasi & Progres Bantuan** | **`2` (Disetujui Dinas)** *(progres 0–50%)* & **`5` (Direalisasikan)** *(progres 100%)* | • **`admin_dinas` & `superadmin`**: Update progres `0% / 25% / 50% / 100%`, upload foto bertahap & kuitansi SPJ. Saat `100%`, status otomatis menjadi `5` (`Direalisasikan`).<br>• **`admin_kelurahan`**: **View-Only** (hanya lihat daftar & progres realisasi warga di wilayahnya; tombol Update/Hapus disembunyikan & endpoint mutasi tetap memblokir `403`). |
 
 > [!NOTE]
 > **Klasifikasi Edit `admin_kelurahan` (Sesuai Konfirmasi):**
@@ -196,7 +196,7 @@ flowchart TD
       - View 2 (Verifikasi Dinas & SPK): `GET /verifikasi` atau `GET /spk` (`spk.index` / `verifikasi.index`)
       - View 3 (Disetujui Dinas): `GET /penerima-disetujui` (`warga.disetujui`)
       - View 4 (Realisasi): `GET /realisasi` (`realisasi.index`)
-  - Pasang middleware `'role:superadmin'` pada `program-bantuan.*` dan `'role:superadmin,admin_dinas'` pada `spk.*` serta `realisasi.*`.
+  - Pasang middleware `'role:superadmin'` pada `program-bantuan.*` dan `'role:superadmin,admin_dinas'` pada aksi mutasi `spk.hitung`, `spk.kriteria.update`, `spk.verifikasi`, `realisasi.update`, dan `realisasi.destroy` (sementara route baca `GET /spk`, `GET /verifikasi`, dan `GET /realisasi` dapat diakses semua role dengan filter `visibleTo($user)` di controller).
 
 ---
 
@@ -214,40 +214,41 @@ flowchart TD
   - Saat ini `id_program` hanya divalidasi (L465) tanpa disimpan. Tambahkan logic update `program` pada `bantuanAktif` (selama status belum `2`/`5`), atau create `Bantuan` baru jika sebelumnya belum ada.
 - [ ] **T2.4 — Terapkan Otorisasi Wilayah yang Sama di `HunianController` & `RumahController`:**
   - Tambahkan validasi kepemilikan wilayah pada `show`, `edit`, `update`, `destroy` (atau putuskan apakah route `/hunian` & `/rumah` tetap aktif atau dipensiunkan karena sudah terpadu di `/warga`).
-- [ ] **T2.5 — Sinkronkan `SpkController@index`:**
-  - Arahkan `SpkController@index` ke view yang benar (View 2: Verifikasi Dinas & SPK) sehingga tidak memanggil `pages.spk.index` yang belum tersedia.
+- [ ] **T2.5 — Sinkronkan & Buka Akses Pantau `SpkController@index`:**
+  - Pastikan `SpkController@index` memfilter data berdasarkan wilayah bila user adalah `admin_kelurahan` (`whereHas('bantuan.warga', fn($q) => $q->visibleTo($user))` / `Warga::visibleTo($user)`) dan me-render View 2 (`pages.spk.index`), sementara aksi `hitung`, `updateKriteria`, dan `verifikasiDinas` tetap khusus `superadmin` & `admin_dinas`.
 
 ---
 
 ### Track 3 — Frontend UI: Pemecahan 4 View, Perbaikan Bug Status & Pemisahan Tombol
-- [ ] **T3.1 — Update Navigasi Sidebar (`resources/views/layouts/sidebar.blade.php`):**
+- [x] **T3.1 — Update Navigasi Sidebar (`resources/views/layouts/sidebar.blade.php`):**
   - Sesuaikan menu berdasarkan role:
-    - **Semua Role:** Dashboard, View 1 (*Daftar Usulan*), View 3 (*Disetujui Dinas* — atau sesuai visibilitas kelurahan).
-    - **Khusus `superadmin` & `admin_dinas`:** View 2 (*Verifikasi Dinas & SPK*), View 4 (*Realisasi Bantuan*).
+    - **Semua Role:** Dashboard, View 1 (*Daftar Usulan*), View 2 (*Verifikasi & SPK* — pantau wilayah untuk kelurahan), View 3 (*Penerima Disetujui* — view-only wilayah untuk kelurahan), View 4 (*Realisasi Bantuan* — pantau view-only wilayah untuk kelurahan).
     - **Khusus `superadmin`:** *Jenis Bantuan* (`program-bantuan.index`).
-- [ ] **T3.2 — Perbaiki Bug Status Badge & Filter:**
+- [x] **T3.2 — Perbaiki Bug Status Badge & Filter:**
   - Gunakan `$bantuan->status_label` dan `$bantuan->status_badge_class` dari Track 1.3 sehingga status `1` (**Diverifikasi**) tampil dengan badge biru muda/info yang jelas (tidak lagi tertulis "Menunggu Verifikasi").
   - Tambahkan filter status yang relevan di View 1 & View 2 agar semua role bisa memfilter dengan akurat.
-- [ ] **T3.3 — Pecah `viewwarga.blade.php` menjadi 4 View + Partials:**
+- [x] **T3.3 — Pecah `viewwarga.blade.php` menjadi 4 View + Partials:**
   - Ekstrak komponen berulang ke `resources/views/pages/warga/partials/`:
     - `_modal_verifikasi.blade.php` (khusus `admin_dinas` & `superadmin`)
-    - `_modal_detail_saw.blade.php` (khusus `admin_dinas` & `superadmin`)
+    - `_modal_detail_saw.blade.php` (bisa dilihat semua role untuk transparansi skor)
     - `_modal_foto_rumah.blade.php`
   - **View 1 (`Daftar Usulan`):** Hanya tombol *Detail* (+ *Edit* jika status `0/1/3` dan milik wilayahnya, + *Hapus* khusus `superadmin`). Tidak ada tombol *Verifikasi Dinas* atau *Hitung Ulang SAW* yang tercampur di sini.
-  - **View 2 (`Verifikasi Dinas & SPK`):** Fokus tombol *Hitung Ulang SAW*, *Rincian SAW*, dan *Verifikasi Dinas* (`@if($bantuan)` wajib dipasang di tombol modal!).
-  - **View 3 (`Disetujui Dinas`):** Fokus daftar penerima resmi (`status = 2`). Tombol *Edit/Update* hanya muncul untuk `admin_dinas` & `superadmin`; bagi `admin_kelurahan` hanya tombol *Detail* (**View-Only**).
-- [ ] **T3.4 — Sesuaikan Form `create.blade.php`, `edit.blade.php`, dan `show.blade.php`:**
+  - **View 2 (`Verifikasi Dinas & SPK`):** Untuk Dinas/Superadmin fokus tombol *Hitung Ulang SAW*, *Bobot Kriteria*, *Rincian SAW*, dan *Verifikasi Dinas* (`@if($bantuan)` wajib dipasang di tombol modal!). Untuk `admin_kelurahan`, tampil dalam mode pantau (*Detail*, *Rincian SAW*, serta *Edit* hanya pada status `0/1/3`).
+  - **View 3 (`Disetujui Dinas`):** Fokus daftar penerima resmi (`status = 2`). Tombol *Ubah Keputusan Verifikasi* hanya muncul untuk `admin_dinas` & `superadmin`; bagi `admin_kelurahan` hanya tombol *Detail* (**View-Only**).
+- [x] **T3.4 — Sesuaikan Form `create.blade.php`, `edit.blade.php`, dan `show.blade.php`:**
   - Pada `create.blade.php` & `edit.blade.php`: untuk `admin_kelurahan`, kunci input `id_wilayah` (disabled/readonly + hidden input atau otomatis tampil teks kelurahannya).
   - Pada `show.blade.php` L40: sembunyikan tombol *Edit Data* jika user `admin_kelurahan` dan status bantuan adalah `2` (Disetujui), `4` (Ditolak), atau `5` (Direalisasikan).
 
 ---
 
 ### Track 4 — Perbaikan Fitur Realisasi (View 4)
-- [ ] **T4.1 — Ketatkan Query & Aksi `RealisasiController`:**
+- [ ] **T4.1 — Ketatkan Query, Filter Wilayah & Aksi `RealisasiController`:**
+  - Pada `RealisasiController::index()`: izinkan `admin_kelurahan` melihat daftar realisasi khusus wilayahnya via `visibleTo($user)` (mode *View-Only*), sementara `storeOrUpdate()` dan `destroy()` tetap memblokir `403` untuk `admin_kelurahan`.
   - Di `RealisasiController::index()` L47–L51: hapus `Bantuan::STATUS_DIVERIFIKASI`, sehingga hanya menampilkan `STATUS_DISETUJUI (2)` dan `STATUS_DIREALISASIKAN (5)`.
   - Di `RealisasiController::storeOrUpdate()`: tolak (`403`/`back()->with('error', ...)`) jika `$bantuan->status_bantuan` bukan `STATUS_DISETUJUI (2)` atau `STATUS_DIREALISASIKAN (5)`.
   - Di `RealisasiController::destroy()` L208: ubah `$id_bantuan ?? $id_realisasi` menjadi `$id_realisasi`.
-- [ ] **T4.2 — Perbaiki UI Filter di `resources/views/pages/realisasi/index.blade.php`:**
+- [ ] **T4.2 — Perbaiki UI Filter & Mode View-Only Kelurahan di `resources/views/pages/realisasi/index.blade.php`:**
+  - Sembunyikan tombol/aksi Update & Hapus Realisasi serta filter kelurahan jika user adalah `admin_kelurahan` (tampilkan banner *View-Only*).
   - Tambahkan dropdown filter `status_bantuan` (`Semua`, `Disetujui / Siap Realisasi (2)`, `Direalisasikan 100% (5)`) agar selaras dengan backend dan tombol reset filter (L238).
   - Pastikan transisi progres `100%` -> `STATUS_DIREALISASIKAN (5)` memberi notifikasi jelas bahwa data telah tercatat selesai di View 4 (dan tidak lagi tampil di View 3).
 
@@ -268,10 +269,11 @@ flowchart TD
 
 ### Track 6 — QA & Acceptance Checklist (Setelah Merge Track 2–4)
 - [ ] **QA-01 (Admin Kelurahan):**
-  - Login sebagai `kelurahan0@bansos.test`: pastikan hanya data kelurahannya yang tampil di Dashboard, View 1, View 3, dan Ekspor Excel.
+  - Login sebagai `kelurahan0@bansos.test`: pastikan hanya data kelurahannya yang tampil di Dashboard, View 1, View 2 (`/spk`), View 3 (`/penerima-disetujui`), View 4 (`/realisasi`), dan Ekspor Excel.
+  - Pastikan View 2 & View 4 tampil dalam mode *View-Only* (tanpa tombol *Hitung Ulang SAW*, *Bobot Kriteria*, *Verifikasi Dinas*, maupun *Update/Hapus Realisasi*).
   - Coba akses URL `/warga/{id_kelurahan_lain}` dan `/warga/{id_kelurahan_lain}/edit` -> harus ditolak (`403`).
   - Uji edit data milik kelurahannya pada status `0`, `1`, `3` -> berhasil; pada status `2`, `4`, `5` -> tombol edit hilang & endpoint `edit/update` menolak (`403`).
-  - Coba akses `/spk/hitung`, `/spk/verifikasi/...`, `/realisasi`, `/program-bantuan` -> harus ditolak (`403`).
+  - Coba tembak endpoint mutasi `POST /spk/hitung`, `POST /spk/kriteria`, `POST /spk/verifikasi/...`, `POST /realisasi/...`, `DELETE /realisasi/...`, serta `/program-bantuan` -> harus ditolak (`403`).
 - [ ] **QA-02 (Admin Dinas):**
   - Login sebagai `dinas1@bansos.test`: bisa melihat semua kelurahan, filter status `Diverifikasi (1)` menampilkan badge **Diverifikasi** dengan benar.
   - Jalankan *Hitung Ulang SAW* & *Verifikasi Dinas* di View 2 -> status `2` muncul di View 3 (dan bisa masuk View 4), status `1` tidak muncul di View 4 Realisasi.
