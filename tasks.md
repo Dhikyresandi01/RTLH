@@ -175,10 +175,10 @@ flowchart TD
 ## Bagian 4: Daftar Task Detail per Track
 
 ### Track 1 — Fondasi Middleware, Policy, Route & Helper Status *(Wajib Selesai Duluan)*
-- [ ] **T1.1 — Perbaiki & Rename Middleware Role:**
+- [x] **T1.1 — Perbaiki & Rename Middleware Role:**
   - Rename `app/Http/Middleware/Ensureuserhasrole.php` -> `EnsureUserHasRole.php` via `git mv`.
   - Tambahkan `return $next($request);` di akhir `handle()`.
-- [ ] **T1.2 — Rename & Lengkapi Policy:**
+- [x] **T1.2 — Rename & Lengkapi Policy:**
   - Rename `app/Policies/Wargapolicy.php` -> `WargaPolicy.php` dan `Bantuanpolicy.php` -> `BantuanPolicy.php`.
   - Perbarui `WargaPolicy::update(User $user, Warga $warga)`:
     - `superadmin`: `true`.
@@ -186,10 +186,10 @@ flowchart TD
     - `admin_kelurahan`: `true` **hanya jika** `$user->id_wilayah === $warga->id_wilayah` **dan** status `bantuanAktif` termasuk `[0, 1, 3]` (atau belum punya `bantuanAktif`). Jika status `[2, 4, 5]`, return `false`.
   - Pastikan `WargaPolicy::create()` mengizinkan `admin_kelurahan` dan `superadmin` (serta `admin_dinas` bila masih diperbolehkan input).
   - Pastikan `WargaPolicy::delete()` hanya `superadmin` (atau sesuai kebijakan tim).
-- [ ] **T1.3 — Helper Status di `app/Models/Bantuan.php`:**
+- [x] **T1.3 — Helper Status di `app/Models/Bantuan.php`:**
   - Tambahkan konstanta/array `STATUS_EDITABLE_KELURAHAN = [self::STATUS_DIAJUKAN, self::STATUS_DIVERIFIKASI, self::STATUS_REVISI]`.
   - Tambahkan accessor/helper `getStatusLabelAttribute()` & `getStatusBadgeClassAttribute()` untuk seluruh kode `0..5` (termasuk `1 = Diverifikasi Lapangan` dan `5 = Direalisasikan`) agar tidak ada badge yang terlewat di view manapun.
-- [ ] **T1.4 — Rapikan & Daftarkan Route di `routes/web.php`:**
+- [x] **T1.4 — Rapikan & Daftarkan Route di `routes/web.php`:**
   - Hapus atau redirect duplikasi `Route::get('/Warga', ...)` dan standarkan penamaan ke `warga.index` (`/warga`) atau nama route baru untuk View 1–3:
     - Contoh penamaan route terpisah:
       - View 1 (Daftar Usulan): `GET /warga` (`warga.index`)

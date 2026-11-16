@@ -41,6 +41,13 @@ class Bantuan extends Model
     public const STATUS_DITOLAK = 4;
     public const STATUS_DIREALISASIKAN = 5;
 
+    // Status bantuan yang masih mengizinkan admin_kelurahan mengedit data usulan
+    public const STATUS_EDITABLE_KELURAHAN = [
+        self::STATUS_DIAJUKAN,
+        self::STATUS_DIVERIFIKASI,
+        self::STATUS_REVISI,
+    ];
+
     public function warga() : BelongsTo {
         return $this->belongsTo(Warga::class, 'id_warga');
     }
@@ -98,5 +105,62 @@ class Bantuan extends Model
         return $query->whereHas('warga', function (Builder $q) use ($user) {
             $q->where('id_wilayah', $user->id_wilayah);
         });
+    }
+
+    /**
+     * Daftar label untuk seluruh kode status_bantuan (0..5).
+     *
+     * @return array<int, string>
+     */
+    public static function statusLabels(): array
+    {
+        return [
+            self::STATUS_DIAJUKAN => 'Menunggu Verifikasi',
+            self::STATUS_DIVERIFIKASI => 'Diverifikasi Lapangan',
+            self::STATUS_DISETUJUI => 'Disetujui Dinas',
+            self::STATUS_REVISI => 'Perlu Revisi',
+            self::STATUS_DITOLAK => 'Ditolak',
+            self::STATUS_DIREALISASIKAN => 'Direalisasikan',
+        ];
+    }
+
+    /**
+     * Cek apakah status bantuan saat ini masih boleh diedit oleh Admin Kelurahan.
+     */
+    public function isEditableByKelurahan(): bool
+    {
+        return in_array((int) $this->status_bantuan, self::STATUS_EDITABLE_KELURAHAN, true);
+    }
+
+    /**
+     * Accessor label teks status bantuan ($bantuan->status_label).
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        if ($this->status_bantuan === null) {
+            return 'Tidak Diketahui';
+        }
+
+        return self::statusLabels()[(int) $this->status_bantuan] ?? 'Tidak Diketahui';
+    }
+
+    /**
+     * Accessor class CSS badge Bootstrap/Mazer ($bantuan->status_badge_class).
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        if ($this->status_bantuan === null) {
+            return 'bg-light text-muted';
+        }
+
+        return match ((int) $this->status_bantuan) {
+            self::STATUS_DIAJUKAN => 'bg-secondary text-white',
+            self::STATUS_DIVERIFIKASI => 'bg-info text-dark',
+            self::STATUS_DISETUJUI => 'bg-primary text-white',
+            self::STATUS_REVISI => 'bg-warning text-dark',
+            self::STATUS_DITOLAK => 'bg-danger text-white',
+            self::STATUS_DIREALISASIKAN => 'bg-success text-white',
+            default => 'bg-light text-muted',
+        };
     }
 }
