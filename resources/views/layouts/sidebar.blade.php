@@ -1,3 +1,23 @@
+<style>
+    #sidebar .sidebar-wrapper .menu .sidebar-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8c98a4;
+        margin: 1.2rem 0 0.4rem;
+        padding: 0.75rem 1rem 0;
+        border-top: 1px solid #eef1f6;
+        pointer-events: none;
+        user-select: none;
+    }
+    #sidebar .sidebar-wrapper .menu .sidebar-title:first-child {
+        margin-top: 0.25rem;
+        padding-top: 0;
+        border-top: none;
+    }
+</style>
+
 <div id="sidebar" class="active">
     <div class="sidebar-wrapper active">
         <div class="sidebar-header pb-2">

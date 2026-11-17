@@ -135,8 +135,8 @@ Dokumen ini berisi hasil audit teknis codebase **E-RTLH Kota Kediri**, temuan fu
 
 | View | Nama Halaman / Fokus | Filter Status Default (`bantuan.status_bantuan`) | Akses Role & Perilaku |
 | :--- | :--- | :--- | :--- |
-| **View 1** | **Daftar Usulan** *(Input & Monitoring Usulan Kelurahan)* | **`0` (Menunggu Verifikasi)** *(+ opsi filter/lihat status `3` Perlu Revisi & `4` Ditolak jika kelurahan perlu pantau/perbaiki usulan)* | • **`admin_kelurahan`**: Input baru (wilayah terkunci ke kelurahannya), edit data saat status `0`, `1`, `3`. View-only saat `2`, `4`, `5`.<br>• **`admin_dinas` & `superadmin`**: Melihat usulan masuk lintas kelurahan; `superadmin` bisa hapus. |
-| **View 2** | **Verifikasi Dinas & SPK SAW** | **Fokus Verifikasi Dinas**: Antrean `0` (untuk diverifikasi) & **`1` (Diverifikasi)** *(serta `3` Perlu Revisi / `4` Ditolak dari hasil verifikasi)* | • **`admin_dinas` & `superadmin`**: Menjalankan *Hitung Ulang SAW*, ubah bobot kriteria, melihat rincian skor `C1`–`C5`, mengubah status keputusan (`1=Diverifikasi`, `2=Disetujui`, `3=Revisi`, `4=Ditolak`) + catatan wajib.<br>• **`admin_kelurahan`**: **View-Only Keputusan SPK** untuk wilayahnya sendiri (lihat peringkat SAW, rincian skor `C1`–`C5`, status & catatan verifikator; tombol *Hitung Ulang SAW*, *Bobot Kriteria*, dan *Verifikasi Dinas* disembunyikan; boleh edit data usulan hanya saat status `0`, `1`, `3`). |
+| **View 1** | **Daftar Usulan** *(Input & Monitoring Usulan Kelurahan)* | **Pra-verifikasi (`0, 3, 4` + belum ada usulan)** *(default di `warga.index`)* | • **`admin_kelurahan`**: Input baru (wilayah terkunci ke kelurahannya), edit data saat status `0`, `1`, `3`. View-only saat `2`, `4`, `5`.<br>• **`admin_dinas` & `superadmin`**: Melihat usulan masuk lintas kelurahan + tombol **Verifikasi Lapangan** (`0/3/4` -> `1=Diverifikasi`, `3=Revisi`, `4=Ditolak`); `superadmin` bisa hapus. |
+| **View 2** | **Verifikasi Dinas & SPK SAW** | **`1` (Diverifikasi Lapangan)** *(di `pages/spk/index.blade.php` via `SpkController@index`)* | • **`admin_dinas` & `superadmin`**: Menjalankan *Hitung Ulang SAW* (khusus status `1` & `2`), ubah bobot kriteria, melihat rincian skor `C1`–`C5`, menetapkan keputusan Dinas (`2=Disetujui`, `1=Diverifikasi`, `3=Revisi`, `4=Ditolak`) + catatan wajib.<br>• **`admin_kelurahan`**: **View-Only Keputusan SPK** untuk wilayahnya sendiri (lihat peringkat SAW, rincian skor `C1`–`C5`, status & catatan verifikator; tombol *Hitung Ulang SAW*, *Bobot Kriteria*, dan *Verifikasi Dinas* disembunyikan; boleh edit data usulan hanya saat status `0`, `1`, `3`). |
 | **View 3** | **Calon Penerima Disetujui Dinas** | **`2` (Disetujui Dinas)** *(Otomatis keluar dari View 3 & pindah ke View 4 saat status menjadi `5` Direalisasikan)* | • **`admin_dinas` & `superadmin`**: Bisa memperbarui keputusan verifikasi sebelum realisasi selesai.<br>• **`admin_kelurahan`**: **View-Only** (hanya lihat daftar & detail warga di wilayahnya, tombol Edit/Hapus disembunyikan). |
 | **View 4** | **Realisasi & Progres Bantuan** | **`2` (Disetujui Dinas)** *(progres 0–50%)* & **`5` (Direalisasikan)** *(progres 100%)* | • **`admin_dinas` & `superadmin`**: Update progres `0% / 25% / 50% / 100%`, upload foto bertahap & kuitansi SPJ. Saat `100%`, status otomatis menjadi `5` (`Direalisasikan`).<br>• **`admin_kelurahan`**: **View-Only** (hanya lihat daftar & progres realisasi warga di wilayahnya; tombol Update/Hapus disembunyikan & endpoint mutasi tetap memblokir `403`). |
 
@@ -201,39 +201,38 @@ flowchart TD
 ---
 
 ### Track 2 — Backend Logic, Proteksi Akses & Pemecahan Query 4 View
-- [ ] **T2.1 — Pisahkan Query Scope / Method untuk View 1, 2, dan 3 (`WargaController` / `SpkController`):**
-  - View 1 (`Daftar Usulan`): query default `status_bantuan = 0` (`Menunggu Verifikasi`), tetap hormati `visibleTo($user)`.
-  - View 2 (`Verifikasi Dinas & SPK`): fokus data untuk diverifikasi/ditetapkan Dinas (`0`, `1`, `3`, `4` dengan tab/filter jelas), sertakan data `spkRanking` dan rincian `C1`–`C5`.
-  - View 3 (`Disetujui Dinas`): hanya `status_bantuan = 2` (`STATUS_DISETUJUI`). Data dengan `status_bantuan = 5` (`STATUS_DIREALISASIKAN`) otomatis tidak muncul di View 3 karena berpindah ke View 4.
-- [ ] **T2.2 — Terapkan Otorisasi Ketat pada `WargaController`:**
+- [x] **T2.1 — Pisahkan Query Scope / Method untuk View 1, 2, dan 3 (`WargaController` / `SpkController`):**
+  - View 1 (`Daftar Usulan`): query default `warga.index` menampilkan usulan **pra-verifikasi** (`0, 3, 4` + warga tanpa `bantuanAktif`), tetap hormati `visibleTo($user)`.
+  - View 2 (`Verifikasi Dinas & SPK`): `SpkController@index` menampilkan usulan berstatus **`1` (`Diverifikasi Lapangan`)** ke view mandiri `pages/spk/index.blade.php`, sertakan data `spkRanking`, `$kriterias`, rincian `C1`–`C5`, dan ringkasan KPI.
+  - View 3 (`Disetujui Dinas`): `WargaController::disetujui()` hanya `status_bantuan = 2` (`STATUS_DISETUJUI`). Data dengan `status_bantuan = 5` (`STATUS_DIREALISASIKAN`) otomatis tidak muncul di View 3 karena berpindah ke View 4.
+- [x] **T2.2 — Terapkan Otorisasi Ketat pada `WargaController`:**
+  - `create()` & `store()`: cek `WargaPolicy::create` (menolak `admin_dinas` dengan `403`); jika `admin_kelurahan`, paksa `$validated['id_wilayah'] = Auth::user()->id_wilayah` di server-side.
   - `show($id)`: wajib cek `visibleTo` / `WargaPolicy::view` (cegah `admin_kelurahan` A buka warga kelurahan B).
-  - `edit($id)` & `update($id)`: wajib cek `WargaPolicy::update` — tolak (`403`) jika `admin_kelurahan` mencoba edit status `2`, `4`, atau `5`, atau beda `id_wilayah`.
-  - `destroy($id)`: batasi via `WargaPolicy::delete` (hanya `superadmin`, atau sesuai aturan tim).
-  - `store()`: jika user `admin_kelurahan`, paksa `$validated['id_wilayah'] = Auth::user()->id_wilayah` di server-side.
-- [ ] **T2.3 — Perbaiki `WargaController::update()` untuk `id_program`:**
-  - Saat ini `id_program` hanya divalidasi (L465) tanpa disimpan. Tambahkan logic update `program` pada `bantuanAktif` (selama status belum `2`/`5`), atau create `Bantuan` baru jika sebelumnya belum ada.
-- [ ] **T2.4 — Terapkan Otorisasi Wilayah yang Sama di `HunianController` & `RumahController`:**
-  - Tambahkan validasi kepemilikan wilayah pada `show`, `edit`, `update`, `destroy` (atau putuskan apakah route `/hunian` & `/rumah` tetap aktif atau dipensiunkan karena sudah terpadu di `/warga`).
-- [ ] **T2.5 — Sinkronkan & Buka Akses Pantau `SpkController@index`:**
-  - Pastikan `SpkController@index` memfilter data berdasarkan wilayah bila user adalah `admin_kelurahan` (`whereHas('bantuan.warga', fn($q) => $q->visibleTo($user))` / `Warga::visibleTo($user)`) dan me-render View 2 (`pages.spk.index`), sementara aksi `hitung`, `updateKriteria`, dan `verifikasiDinas` tetap khusus `superadmin` & `admin_dinas`.
+  - `edit($id)` & `update($id)`: wajib cek `WargaPolicy::update` — tolak (`403`) jika `admin_kelurahan` mencoba edit status `2`, `4`, atau `5`, atau beda `id_wilayah`, serta kunci `status_update` di server-side agar hanya dapat diubah oleh Dinas/Superadmin; `edit()` turut mengirim `$programs`.
+  - `destroy($id)`: batasi via `WargaPolicy::delete` (hanya `superadmin`).
+- [x] **T2.3 — Perbaiki `WargaController::update()` untuk `id_program`:**
+  - Sinkronisasi `id_program` pada `bantuanAktif` (selama status belum `2`/`4`/`5`), atau create `Bantuan` baru jika sebelumnya belum ada.
+- [x] **T2.4 — Terapkan Otorisasi Wilayah & Policy yang Sama di `HunianController` & `RumahController`:**
+  - Terapkan `WargaPolicy` (`create`, `view`, `update`, `delete`) pada `HunianController` dan `RumahController` sehingga `admin_dinas` hanya *view-only* (ditolak `403` pada `create/store/edit/update`), `admin_kelurahan` dibatasi wilayah & status `0/1/3`, serta `destroy` khusus `superadmin`.
+- [x] **T2.5 — Sinkronkan & Buka Akses Pantau `SpkController@index`:**
+  - `SpkController@index` membuka akses baca untuk semua role pada `pages/spk/index.blade.php` dengan filter `visibleTo($user)` dan status `1` (`Diverifikasi Lapangan`), sementara aksi `hitung`, `updateKriteria`, dan `verifikasiDinas` tetap khusus `superadmin` & `admin_dinas` (serta otomatis menghapus/menghitung ulang `spk_ranking` saat status berubah).
+  - `SawRankingService::hitungDanSimpan()` menghitung ranking SAW khusus status `[1, 2]` dan membersihkan seluruh `spk_ranking` usang pada non-`[1, 2]`, non-aktif, maupun tahun anggaran/program terkait.
 
 ---
 
 ### Track 3 — Frontend UI: Pemecahan 4 View, Perbaikan Bug Status & Pemisahan Tombol
 - [x] **T3.1 — Update Navigasi Sidebar (`resources/views/layouts/sidebar.blade.php`):**
-  - Sesuaikan menu berdasarkan role:
-    - **Semua Role:** Dashboard, View 1 (*Daftar Usulan*), View 2 (*Verifikasi & SPK* — pantau wilayah untuk kelurahan), View 3 (*Penerima Disetujui* — view-only wilayah untuk kelurahan), View 4 (*Realisasi Bantuan* — pantau view-only wilayah untuk kelurahan).
-    - **Khusus `superadmin`:** *Jenis Bantuan* (`program-bantuan.index`).
+  - Sesuaikan menu berdasarkan role (View 1–4 tampil untuk semua role; Master Data `program-bantuan.index` khusus `superadmin`) serta bedakan tampilan `.sidebar-title` dari item menu.
 - [x] **T3.2 — Perbaiki Bug Status Badge & Filter:**
   - Gunakan `$bantuan->status_label` dan `$bantuan->status_badge_class` dari Track 1.3 sehingga status `1` (**Diverifikasi**) tampil dengan badge biru muda/info yang jelas (tidak lagi tertulis "Menunggu Verifikasi").
-  - Tambahkan filter status yang relevan di View 1 & View 2 agar semua role bisa memfilter dengan akurat.
-- [x] **T3.3 — Pecah `viewwarga.blade.php` menjadi 4 View + Partials:**
+  - Sesuaikan filter status View 1 (`0, 3, 4`) serta filter tahun anggaran/kelurahan/program di View 2 (`pages/spk/index.blade.php`).
+- [x] **T3.3 — Pecah `viewwarga.blade.php` + `pages/spk/index.blade.php` + Partials (`_tabs_survei`, `_modal_*`, `disetujui.blade.php`):**
   - Ekstrak komponen berulang ke `resources/views/pages/warga/partials/`:
-    - `_modal_verifikasi.blade.php` (khusus `admin_dinas` & `superadmin`)
+    - `_modal_verifikasi.blade.php` (khusus `admin_dinas` & `superadmin`, dengan konfirmasi submit dan dukungan `allowedStatuses`/`showSawBox`)
     - `_modal_detail_saw.blade.php` (bisa dilihat semua role untuk transparansi skor)
     - `_modal_foto_rumah.blade.php`
-  - **View 1 (`Daftar Usulan`):** Hanya tombol *Detail* (+ *Edit* jika status `0/1/3` dan milik wilayahnya, + *Hapus* khusus `superadmin`). Tidak ada tombol *Verifikasi Dinas* atau *Hitung Ulang SAW* yang tercampur di sini.
-  - **View 2 (`Verifikasi Dinas & SPK`):** Untuk Dinas/Superadmin fokus tombol *Hitung Ulang SAW*, *Bobot Kriteria*, *Rincian SAW*, dan *Verifikasi Dinas* (`@if($bantuan)` wajib dipasang di tombol modal!). Untuk `admin_kelurahan`, tampil dalam mode pantau (*Detail*, *Rincian SAW*, serta *Edit* hanya pada status `0/1/3`).
+  - **View 1 (`Daftar Usulan`):** Hanya tombol *Detail*, *Verifikasi Lapangan* (`0/3/4` -> `1/3/4` khusus Dinas/Superadmin), *Edit* (jika status `0/1/3` dan milik wilayahnya), dan *Hapus* (khusus `superadmin`). Tidak ada tombol *Hitung Ulang SAW* / tab SPK yang tercampur di View 1.
+  - **View 2 (`pages/spk/index.blade.php`):** Fokus usulan status `1` (*Diverifikasi Lapangan*). Untuk Dinas/Superadmin tersedia tombol *Hitung Ulang SAW*, *Bobot Kriteria*, *Rincian SAW*, dan *Penetapan Verifikasi Dinas* (`@if($bantuan)` wajib dipasang!). Untuk `admin_kelurahan`, tampil dalam mode pantau (*Detail*, *Rincian SAW*, serta *Edit* hanya pada status `0/1/3`).
   - **View 3 (`Disetujui Dinas`):** Fokus daftar penerima resmi (`status = 2`). Tombol *Ubah Keputusan Verifikasi* hanya muncul untuk `admin_dinas` & `superadmin`; bagi `admin_kelurahan` hanya tombol *Detail* (**View-Only**).
 - [x] **T3.4 — Sesuaikan Form `create.blade.php`, `edit.blade.php`, dan `show.blade.php`:**
   - Pada `create.blade.php` & `edit.blade.php`: untuk `admin_kelurahan`, kunci input `id_wilayah` (disabled/readonly + hidden input atau otomatis tampil teks kelurahannya).
@@ -242,14 +241,15 @@ flowchart TD
 ---
 
 ### Track 4 — Perbaikan Fitur Realisasi (View 4)
-- [ ] **T4.1 — Ketatkan Query, Filter Wilayah & Aksi `RealisasiController`:**
+- [x] **T4.1 — Ketatkan Query, Filter Wilayah & Aksi `RealisasiController`:**
   - Pada `RealisasiController::index()`: izinkan `admin_kelurahan` melihat daftar realisasi khusus wilayahnya via `visibleTo($user)` (mode *View-Only*), sementara `storeOrUpdate()` dan `destroy()` tetap memblokir `403` untuk `admin_kelurahan`.
-  - Di `RealisasiController::index()` L47–L51: hapus `Bantuan::STATUS_DIVERIFIKASI`, sehingga hanya menampilkan `STATUS_DISETUJUI (2)` dan `STATUS_DIREALISASIKAN (5)`.
-  - Di `RealisasiController::storeOrUpdate()`: tolak (`403`/`back()->with('error', ...)`) jika `$bantuan->status_bantuan` bukan `STATUS_DISETUJUI (2)` atau `STATUS_DIREALISASIKAN (5)`.
-  - Di `RealisasiController::destroy()` L208: ubah `$id_bantuan ?? $id_realisasi` menjadi `$id_realisasi`.
-- [ ] **T4.2 — Perbaiki UI Filter & Mode View-Only Kelurahan di `resources/views/pages/realisasi/index.blade.php`:**
+  - Di `RealisasiController::index()`: hapus `Bantuan::STATUS_DIVERIFIKASI`, sehingga hanya menampilkan `STATUS_DISETUJUI (2)` dan `STATUS_DIREALISASIKAN (5)`.
+  - Di `RealisasiController::storeOrUpdate()`: tolak (`back()->with('error', ...)`) jika `$bantuan->status_bantuan` bukan `STATUS_DISETUJUI (2)` atau `STATUS_DIREALISASIKAN (5)`.
+  - Di `RealisasiController::destroy()` L208: ubah `$id_bantuan ?? $id_realisasi` menjadi `$id_realisasi` dan perbaiki cast `(int)` pada perbandingan status.
+- [x] **T4.2 — Perbaiki UI Filter, Tombol Reset & Mode View-Only Kelurahan di `resources/views/pages/realisasi/index.blade.php`:**
   - Sembunyikan tombol/aksi Update & Hapus Realisasi serta filter kelurahan jika user adalah `admin_kelurahan` (tampilkan banner *View-Only*).
-  - Tambahkan dropdown filter `status_bantuan` (`Semua`, `Disetujui / Siap Realisasi (2)`, `Direalisasikan 100% (5)`) agar selaras dengan backend dan tombol reset filter (L238).
+  - Tambahkan dropdown filter `status_bantuan` (`Semua`, `Disetujui / Siap Realisasi (2)`, `Direalisasikan 100% (5)`) agar selaras dengan backend dan tombol reset filter.
+  - Tambahkan tombol Hapus/Reset data realisasi (`DELETE /realisasi/{id_realisasi}`) khusus `admin_dinas` & `superadmin`.
   - Pastikan transisi progres `100%` -> `STATUS_DIREALISASIKAN (5)` memberi notifikasi jelas bahwa data telah tercatat selesai di View 4 (dan tidak lagi tampil di View 3).
 
 ---

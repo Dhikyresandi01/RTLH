@@ -3,6 +3,9 @@
 @section('title', 'Realisasi & Penyaluran Bantuan RTLH')
 
 @section('content')
+@php
+    $isDinas = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
+@endphp
 <style>
     .kpi-card {
         border-radius: 12px;
@@ -78,16 +81,31 @@
                     <i class="bi bi-hammer me-2"></i>Realisasi & Progres Bantuan RTLH
                 </h3>
                 <p class="text-muted small mb-0">
-                    Monitoring penyaluran bantuan, progres pengerjaan fisik bangunan (0%, 25%, 50%, 100%), dan dokumen pertanggungjawaban calon penerima yang telah terverifikasi.
+                    @if($isDinas)
+                        Monitoring penyaluran bantuan, progres pengerjaan fisik bangunan (0%, 25%, 50%, 100%), dan dokumen pertanggungjawaban calon penerima yang telah disetujui Dinas.
+                    @else
+                        Pantau progres pengerjaan fisik bangunan (0%, 25%, 50%, 100%) dan dokumentasi penyaluran bantuan RTLH di wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.
+                    @endif
                 </p>
             </div>
             <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
-                <a href="{{ route('warga') }}" class="btn btn-outline-primary shadow-sm px-3 py-2">
-                    <i class="bi bi-people-fill me-1"></i> Data Terpadu Calon Penerima
+                <a href="{{ route('warga.index') }}" class="btn btn-outline-primary shadow-sm px-3 py-2">
+                    <i class="bi bi-people-fill me-1"></i> Daftar Usulan
                 </a>
             </div>
         </div>
     </div>
+
+    @if(!$isDinas)
+        <div class="alert alert-light-info border border-info-subtle shadow-sm mb-4">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-eye-fill text-info fs-5 me-2"></i>
+                <small class="text-dark mb-0">
+                    <strong>Mode Pantau Kelurahan (View-Only):</strong> Anda dapat memantau progres fisik dan galeri dokumentasi realisasi untuk warga di kelurahan Anda. Perubahan atau penghapusan progres realisasi hanya dilakukan oleh Admin Dinas / Superadmin.
+                </small>
+            </div>
+        </div>
+    @endif
 
     <!-- Alert Flash Message -->
     @if(session('success'))
@@ -178,7 +196,7 @@
         <div class="card-body p-3">
             <form method="GET" action="{{ route('realisasi.index') }}">
                 <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-{{ $isDinas ? '2' : '3' }}">
                         <label class="form-label small fw-semibold text-muted mb-1">Cari NIK / Nama / KK</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
@@ -186,17 +204,19 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-md-2">
-                        <label class="form-label small fw-semibold text-muted mb-1">Filter Kelurahan</label>
-                        <select name="id_wilayah" class="form-select form-select-sm">
-                            <option value="">Semua Kelurahan</option>
-                            @foreach($wilayahs as $w)
-                                <option value="{{ $w->id_wilayah }}" {{ request('id_wilayah') == $w->id_wilayah ? 'selected' : '' }}>
-                                    {{ $w->desa }} (Kec. {{ $w->kecamatan }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @if($isDinas)
+                        <div class="col-12 col-md-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">Filter Kelurahan</label>
+                            <select name="id_wilayah" class="form-select form-select-sm">
+                                <option value="">Semua Kelurahan</option>
+                                @foreach($wilayahs as $w)
+                                    <option value="{{ $w->id_wilayah }}" {{ request('id_wilayah') == $w->id_wilayah ? 'selected' : '' }}>
+                                        {{ $w->desa }} (Kec. {{ $w->kecamatan }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
 
                     <div class="col-12 col-md-2">
                         <label class="form-label small fw-semibold text-muted mb-1">Jenis Bantuan</label>
@@ -211,7 +231,16 @@
                     </div>
 
                     <div class="col-12 col-md-2">
-                        <label class="form-label small fw-semibold text-muted mb-1">Status Progres Fisik</label>
+                        <label class="form-label small fw-semibold text-muted mb-1">Status Bantuan</label>
+                        <select name="status_bantuan" class="form-select form-select-sm">
+                            <option value="">Semua Status</option>
+                            <option value="{{ \App\Models\Bantuan::STATUS_DISETUJUI }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DISETUJUI ? 'selected' : '' }}>Disetujui / Siap Realisasi</option>
+                            <option value="{{ \App\Models\Bantuan::STATUS_DIREALISASIKAN }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DIREALISASIKAN ? 'selected' : '' }}>Direalisasikan (100%)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-semibold text-muted mb-1">Progres Fisik</label>
                         <select name="progres" class="form-select form-select-sm">
                             <option value="">Semua Progres</option>
                             <option value="belum" {{ request('progres') === 'belum' ? 'selected' : '' }}>Belum Mulai (0%)</option>
@@ -221,7 +250,7 @@
                         </select>
                     </div>
 
-                    <div class="col-12 col-md-1">
+                    <div class="col-12 col-md-{{ $isDinas ? '1' : '2' }}">
                         <label class="form-label small fw-semibold text-muted mb-1">Tahun</label>
                         <select name="tahun" class="form-select form-select-sm">
                             <option value="">Semua</option>
@@ -231,9 +260,9 @@
                         </select>
                     </div>
 
-                    <div class="col-12 col-md-2 d-flex gap-2">
+                    <div class="col-12 col-md-1 d-flex gap-2">
                         <button type="submit" class="btn btn-sm btn-primary w-100" title="Terapkan Filter">
-                            <i class="bi bi-funnel me-1"></i> Filter
+                            <i class="bi bi-funnel"></i>
                         </button>
                         @if(request()->hasAny(['search', 'id_wilayah', 'id_program', 'progres', 'tahun', 'status_bantuan']))
                             <a href="{{ route('realisasi.index') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter">
@@ -321,18 +350,10 @@
 
                                 <!-- Status Verifikasi Dinas -->
                                 <td>
-                                    @if($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DIREALISASIKAN)
-                                        <span class="badge bg-success"><i class="bi bi-house-check-fill me-1"></i>Direalisasikan</span>
-                                    @elseif($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DISETUJUI)
-                                        <span class="badge bg-primary"><i class="bi bi-check2-circle me-1"></i>Disetujui Dinas</span>
-                                    @elseif($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DIVERIFIKASI)
-                                        <span class="badge bg-info text-dark"><i class="bi bi-patch-check me-1"></i>Diverifikasi</span>
-                                    @else
-                                        <span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Diajukan</span>
-                                    @endif
-                                    @if($bantuan->verifikator)
-                                        <div class="small text-muted" style="font-size: 0.68rem;">Oleh: {{ $bantuan->verifikator->name }}</div>
-                                    @endif
+                                    @include('pages.warga.partials._status_badge', [
+                                        'bantuan' => $bantuan,
+                                        'showVerifikator' => $isDinas,
+                                    ])
                                 </td>
 
                                 <!-- Progres Fisik Bangunan -->
@@ -393,14 +414,20 @@
                                 <!-- Aksi -->
                                 <td class="text-end pe-4">
                                     <div class="btn-group btn-group-sm">
-                                        <!-- Tombol Update Realisasi -->
-                                        <button type="button" 
-                                                class="btn btn-primary" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#modalUpdateRealisasi{{ $bantuan->id_bantuan }}" 
-                                                title="Input / Update Progres Realisasi">
-                                            <i class="bi bi-pencil-square me-1"></i> Update
-                                        </button>
+                                        @if($isDinas)
+                                            <!-- Tombol Update Realisasi -->
+                                            <button type="button" 
+                                                    class="btn btn-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modalUpdateRealisasi{{ $bantuan->id_bantuan }}" 
+                                                    title="Input / Update Progres Realisasi">
+                                                <i class="bi bi-pencil-square me-1"></i> Update
+                                            </button>
+                                        @elseif($warga)
+                                            <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Warga">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        @endif
 
                                         <!-- Tombol Galeri Detail -->
                                         <button type="button" 
@@ -410,10 +437,21 @@
                                                 title="Galeri Dokumentasi Foto Fisik">
                                             <i class="bi bi-images"></i>
                                         </button>
+
+                                        @if($isDinas && $realisasi)
+                                            <form action="{{ route('realisasi.destroy', $realisasi->id_realisasi) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus / reset data realisasi untuk {{ addslashes($warga?->nama ?? 'warga ini') }}? Status bantuan akan dikembalikan ke Disetujui Dinas.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-light-danger" title="Hapus / Reset Data Realisasi">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
 
+                            @if($isDinas)
                             <!-- ================= MODAL UPDATE PROGRES REALISASI ================= -->
                             <div class="modal fade" id="modalUpdateRealisasi{{ $bantuan->id_bantuan }}" tabindex="-1" aria-labelledby="labelUpdate{{ $bantuan->id_bantuan }}" aria-hidden="true">
                                 <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -557,6 +595,7 @@
                                 </div>
                             </div>
                             <!-- ================= END MODAL UPDATE ================= -->
+                            @endif
 
                             <!-- ================= MODAL GALERI FOTO PERBANDINGAN ================= -->
                             <div class="modal fade" id="modalGaleri{{ $bantuan->id_bantuan }}" tabindex="-1" aria-labelledby="labelGaleri{{ $bantuan->id_bantuan }}" aria-hidden="true">

@@ -3,24 +3,6 @@
 @section('title', 'Verifikasi Dinas & Perankingan SPK (SAW)')
 
 @section('content')
-@php
-    $isDinas = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
-    $items = $rankings ?? $wargas ?? collect();
-    $tahun = $tahun ?? request('tahun', date('Y'));
-    $availableYears = !empty($availableYears) ? $availableYears : [(int) date('Y')];
-    $kriterias = $kriterias ?? \App\Models\SpkKriteria::orderBy('kode')->get();
-    $programs = $programs ?? \App\Models\ProgramBantuan::orderBy('nama_program')->get();
-    $wilayahs = $wilayahs ?? \App\Models\Wilayah::orderBy('desa')->get();
-
-    $totalKandidat = $totalKandidat ?? (method_exists($items, 'total') ? $items->total() : $items->count());
-    $avgSkor = $avgSkor ?? 0;
-    $totalMenunggu = $totalMenunggu ?? 0;
-    $totalRevisi = $totalRevisi ?? 0;
-    $totalDitolak = $totalDitolak ?? 0;
-    $totalDisetujui = $totalDisetujui ?? 0;
-    $totalRevisiAtauDitolak = $totalRevisi + $totalDitolak;
-@endphp
-
 <style>
     .kpi-card {
         border-radius: 12px;
@@ -38,19 +20,31 @@
         justify-content: center;
         flex-shrink: 0;
     }
-    .table-spk thead th {
+    .kpi-icon i {
+        width: auto;
+        height: auto;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .kpi-icon i::before {
+        vertical-align: middle;
+        line-height: 1;
+    }
+    .table-terpadu thead th {
         background-color: #f8f9fa !important;
         color: #495057;
         font-weight: 700;
-        font-size: 0.78rem;
+        font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        padding: 0.85rem 0.9rem !important;
+        padding: 0.85rem 1rem !important;
         border-bottom: 2px solid #e9ecef !important;
         white-space: nowrap;
     }
-    .table-spk tbody td {
-        padding: 0.9rem 0.9rem !important;
+    .table-terpadu tbody td {
+        padding: 0.95rem 1rem !important;
         vertical-align: middle;
         font-size: 0.88rem;
     }
@@ -61,59 +55,45 @@
     <div class="page-title mb-4">
         <div class="row align-items-center">
             <div class="col-12 col-xl-7">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                        <li class="breadcrumb-item">Pendataan &amp; Verifikasi</li>
-                        <li class="breadcrumb-item active" aria-current="page">Verifikasi Dinas &amp; SPK SAW</li>
-                    </ol>
-                </nav>
                 <h3 class="fw-bold mb-1 text-primary">
-                    <i class="bi bi-shield-check me-2"></i>Verifikasi Dinas &amp; Perankingan SPK (SAW)
+                    <i class="bi bi-award-fill me-2 text-warning"></i>Verifikasi Dinas &amp; Perankingan SPK (SAW)
                 </h3>
                 @if($isDinas)
-                    <p class="text-muted small mb-0">
-                        Panel evaluasi prioritas calon penerima bantuan RTLH dengan metode <strong>Simple Additive Weighting (SAW)</strong> serta penetapan keputusan verifikasi Dinas.
+                    <p class="text-muted mb-0">
+                        Evaluasi prioritas calon penerima berstatus <strong>Diverifikasi Lapangan</strong> Tahun Anggaran <strong>{{ $tahun }}</strong> menggunakan metode <strong>Simple Additive Weighting (SAW)</strong> serta penetapan keputusan Dinas.
                     </p>
                 @else
-                    <p class="text-muted small mb-0">
-                        Pantau peringkat prioritas SPK SAW serta status dan catatan verifikasi Dinas untuk usulan wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.
+                    <p class="text-muted mb-0">
+                        Pantau peringkat prioritas SPK SAW untuk usulan berstatus <strong>Diverifikasi Lapangan</strong> Tahun Anggaran <strong>{{ $tahun }}</strong> di wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.
                     </p>
                 @endif
             </div>
-            @if($isDinas)
-                <div class="col-12 col-xl-5 text-xl-end mt-3 mt-xl-0 d-flex flex-wrap justify-content-xl-end gap-2">
+            <div class="col-12 col-xl-5 text-xl-end mt-3 mt-xl-0 d-flex flex-wrap justify-content-xl-end gap-2">
+                @if($isDinas)
                     @if($kriterias->isNotEmpty())
                         <button type="button" class="btn btn-outline-primary shadow-sm px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalKriteriaSAW">
                             <i class="bi bi-sliders me-1"></i> Bobot Kriteria
                         </button>
                     @endif
 
-                    <form action="{{ route('spk.hitung') }}" method="POST" class="d-inline" onsubmit="return confirm('Jalankan kalkulasi ulang perankingan SAW untuk tahun anggaran {{ $tahun }}?');">
+                    <form action="{{ route('spk.hitung') }}" method="POST" class="d-inline" onsubmit="return confirm('Jalankan kalkulasi ulang perankingan SAW untuk data terverifikasi/disetujui tahun {{ $tahun }}?');">
                         @csrf
                         <input type="hidden" name="tahun" value="{{ $tahun }}">
                         @if(request()->filled('id_program'))
                             <input type="hidden" name="id_program" value="{{ request('id_program') }}">
                         @endif
-                        <button type="submit" class="btn btn-warning text-dark shadow-sm px-3 py-2 fw-semibold">
+                        <button type="submit" class="btn btn-warning text-dark shadow-sm px-3 py-2 fw-semibold" title="Perbarui Peringkat SAW">
                             <i class="bi bi-arrow-repeat me-1"></i> Hitung Ulang SAW
                         </button>
                     </form>
-                </div>
-            @endif
-        </div>
-    </div>
+                @endif
 
-    @if(!$isDinas)
-        <div class="alert alert-light-info border border-info-subtle shadow-sm mb-4">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-eye-fill text-info fs-5 me-2"></i>
-                <small class="text-dark mb-0">
-                    <strong>Mode Pantau Kelurahan (View-Only Keputusan Dinas):</strong> Anda dapat melihat hasil perankingan SPK SAW, rincian skor, dan catatan verifikasi Dinas untuk warga di kelurahan Anda. Perbaikan data tetap tersedia pada usulan berstatus <em>Menunggu Verifikasi</em>, <em>Diverifikasi Lapangan</em>, atau <em>Perlu Revisi</em>.
-                </small>
+                <a href="{{ route('warga.index') }}" class="btn btn-outline-secondary shadow-sm px-3 py-2 fw-semibold">
+                    <i class="bi bi-arrow-left me-1"></i> Daftar Usulan
+                </a>
             </div>
         </div>
-    @endif
+    </div>
 
     <!-- Alert Notifikasi Flash -->
     @if(session('success'))
@@ -136,33 +116,45 @@
         </div>
     @endif
 
-    <!-- KPI Cards Ringkasan SPK & Verifikasi -->
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible show fade shadow-sm mb-4">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-danger"></i>
+                <div>
+                    <strong>Validasi gagal:</strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(!$isDinas)
+        <div class="alert alert-light-info border border-info-subtle shadow-sm mb-4">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-eye-fill text-info fs-5 me-2"></i>
+                <small class="text-dark mb-0">
+                    <strong>Mode Pantau Kelurahan (View-Only Keputusan Dinas):</strong> Anda dapat melihat hasil perankingan SPK SAW, rincian skor <code>C1</code>–<code>C5</code>, dan catatan verifikasi Dinas untuk usulan di kelurahan Anda. Perbaikan data masih tersedia selama status masih <em>Diverifikasi Lapangan</em>.
+                </small>
+            </div>
+        </div>
+    @endif
+
+    <!-- Kartu Statistik KPI Ringkasan -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 border-start border-primary border-4 h-100 kpi-card">
                 <div class="card-body p-3 d-flex align-items-center">
                     <div class="kpi-icon bg-light-primary text-primary me-3">
-                        <i class="bi bi-award-fill fs-4"></i>
+                        <i class="bi bi-person-check-fill fs-4"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-semibold">Kandidat SPK ({{ $tahun }})</div>
+                        <div class="text-muted small fw-semibold">Kandidat Diverifikasi ({{ $tahun }})</div>
                         <h4 class="fw-bold mb-0 text-dark">{{ $totalKandidat }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">Rata-rata skor: {{ number_format($avgSkor, 4) }}</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 border-start border-info border-4 h-100 kpi-card">
-                <div class="card-body p-3 d-flex align-items-center">
-                    <div class="kpi-icon bg-light-info text-info me-3">
-                        <i class="bi bi-hourglass-split fs-4"></i>
-                    </div>
-                    <div>
-                        <div class="text-muted small fw-semibold">Menunggu / Diverifikasi</div>
-                        <h4 class="fw-bold mb-0 text-dark">{{ $totalMenunggu }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">Antrean keputusan Dinas</small>
                     </div>
                 </div>
             </div>
@@ -171,13 +163,15 @@
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 border-start border-warning border-4 h-100 kpi-card">
                 <div class="card-body p-3 d-flex align-items-center">
-                    <div class="kpi-icon bg-light-warning text-warning me-3">
-                        <i class="bi bi-exclamation-circle-fill fs-4"></i>
+                    <div class="kpi-icon bg-light-warning text-dark me-3">
+                        <i class="bi bi-award-fill fs-4 text-warning"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-semibold">Revisi / Ditolak</div>
-                        <h4 class="fw-bold mb-0 text-dark">{{ $totalRevisiAtauDitolak }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">Revisi: {{ $totalRevisi }} | Ditolak: {{ $totalDitolak }}</small>
+                        <div class="text-muted small fw-semibold">Sudah Diranking SAW</div>
+                        <h4 class="fw-bold mb-0 text-dark">{{ $totalSudahRanking }}</h4>
+                        @if($totalBelumRanking > 0)
+                            <small class="text-muted">{{ $totalBelumRanking }} belum diranking</small>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -190,21 +184,34 @@
                         <i class="bi bi-check-circle-fill fs-4"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-semibold">Disetujui Dinas</div>
+                        <div class="text-muted small fw-semibold">Disetujui Dinas ({{ $tahun }})</div>
                         <h4 class="fw-bold mb-0 text-success">{{ $totalDisetujui }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">Masuk daftar penerima SK</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 border-start border-info border-4 h-100 kpi-card">
+                <div class="card-body p-3 d-flex align-items-center">
+                    <div class="kpi-icon bg-light-info text-info me-3">
+                        <i class="bi bi-graph-up-arrow fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small fw-semibold">Rata-rata Skor SAW</div>
+                        <h4 class="fw-bold mb-0 text-primary">{{ number_format((float) $avgSkor, 4) }}</h4>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter & Pencarian -->
+    <!-- Filter & Pencarian SPK -->
     <div class="card mb-4 shadow-sm border-0">
         <div class="card-body p-3">
             <form method="GET" action="{{ route('spk.index') }}">
                 <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-{{ $isDinas ? '3' : '4' }}">
+                    <div class="col-12 col-md-{{ $isDinas ? '3' : '5' }}">
                         <label class="form-label small fw-semibold text-muted mb-1">Cari NIK / Nama / No. KK</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
@@ -212,48 +219,38 @@
                         </div>
                     </div>
 
-                    <div class="col-6 col-md-{{ $isDinas ? '1' : '2' }}">
-                        <label class="form-label small fw-semibold text-muted mb-1">Tahun</label>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-semibold text-muted mb-1">Tahun Anggaran</label>
                         <select name="tahun" class="form-select form-select-sm">
-                            @foreach($availableYears as $th)
-                                <option value="{{ $th }}" {{ (string) $tahun === (string) $th ? 'selected' : '' }}>{{ $th }}</option>
+                            @foreach($availableYears as $yr)
+                                <option value="{{ $yr }}" {{ (int) $tahun === (int) $yr ? 'selected' : '' }}>
+                                    {{ $yr }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
 
                     @if($isDinas)
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small fw-semibold text-muted mb-1">Kelurahan</label>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small fw-semibold text-muted mb-1">Filter Kelurahan</label>
                             <select name="id_wilayah" class="form-select form-select-sm">
                                 <option value="">Semua Kelurahan</option>
                                 @foreach($wilayahs as $wilayah)
                                     <option value="{{ $wilayah->id_wilayah }}" {{ request('id_wilayah') == $wilayah->id_wilayah ? 'selected' : '' }}>
-                                        {{ $wilayah->desa }}
+                                        {{ $wilayah->desa }} (Kec. {{ $wilayah->kecamatan }})
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                     @endif
 
-                    <div class="col-12 col-md-3">
-                        <label class="form-label small fw-semibold text-muted mb-1">Program Bantuan</label>
+                    <div class="col-12 col-md-{{ $isDinas ? '3' : '4' }}">
+                        <label class="form-label small fw-semibold text-muted mb-1">Jenis Bantuan</label>
                         <select name="id_program" class="form-select form-select-sm">
-                            <option value="">Semua Program</option>
+                            <option value="">Semua Jenis</option>
                             @foreach($programs as $prog)
                                 <option value="{{ $prog->id_program }}" {{ request('id_program') == $prog->id_program ? 'selected' : '' }}>
                                     {{ $prog->nama_program }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-md-2">
-                        <label class="form-label small fw-semibold text-muted mb-1">Status Verifikasi</label>
-                        <select name="status_bantuan" class="form-select form-select-sm">
-                            <option value="">Semua Status</option>
-                            @foreach(\App\Models\Bantuan::statusLabels() as $kode => $label)
-                                <option value="{{ $kode }}" {{ request('status_bantuan') === (string) $kode ? 'selected' : '' }}>
-                                    {{ $label }}
                                 </option>
                             @endforeach
                         </select>
@@ -263,7 +260,7 @@
                         <button type="submit" class="btn btn-sm btn-primary w-100" title="Terapkan Filter">
                             <i class="bi bi-funnel"></i>
                         </button>
-                        @if(request()->hasAny(['search', 'id_wilayah', 'id_program', 'status_bantuan', 'tahun']))
+                        @if(request()->hasAny(['search', 'id_wilayah', 'id_program']) || (int) $tahun !== (int) date('Y'))
                             <a href="{{ route('spk.index') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </a>
@@ -274,27 +271,29 @@
         </div>
     </div>
 
-    <!-- Tabel Utama Perankingan SPK SAW & Verifikasi Dinas -->
+    <!-- Card Utama Tabel SPK SAW -->
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center">
             <div>
-                <h5 class="card-title fw-bold text-dark mb-0">Matriks Perankingan SAW &amp; {{ $isDinas ? 'Keputusan Verifikasi' : 'Status Verifikasi Dinas' }}</h5>
+                <h5 class="card-title fw-bold text-dark mb-0">
+                    Matriks Perankingan SAW &amp; Keputusan Verifikasi
+                </h5>
                 <small class="text-muted">
                     @if($isDinas)
-                        Klik tombol <strong>Verifikasi</strong> untuk menetapkan status (Diverifikasi Lapangan, Disetujui Dinas, Perlu Revisi, atau Ditolak).
+                        Menampilkan usulan berstatus <strong>Diverifikasi Lapangan</strong> Tahun {{ $tahun }}. Perhitungan SAW hanya memproses usulan status <code>1</code> (Diverifikasi) &amp; <code>2</code> (Disetujui). Klik <strong>Verifikasi</strong> untuk menetapkan keputusan Dinas.
                     @else
-                        Klik ikon kalkulator untuk melihat rincian skor SAW atau tombol edit jika usulan masih berstatus Menunggu Verifikasi, Diverifikasi Lapangan, atau Perlu Revisi.
+                        Menampilkan peringkat SAW untuk usulan berstatus <strong>Diverifikasi Lapangan</strong> di Kelurahan {{ Auth::user()->wilayah->desa ?? '' }} Tahun {{ $tahun }}.
                     @endif
                 </small>
             </div>
             <span class="badge bg-light-primary text-primary px-3 py-2 rounded-pill fw-bold">
-                Tahun Anggaran {{ $tahun }}
+                Total: {{ $wargas->total() }} Kandidat
             </span>
         </div>
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0 align-middle table-spk">
+                <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
                     <thead>
                         <tr>
                             <th class="ps-4 text-center" style="width: 75px;">Rank</th>
@@ -306,20 +305,17 @@
                             <th class="text-center" title="Penghasilan">C5 (Ekonomi)</th>
                             <th class="text-center" style="width: 135px;">Skor SAW (V<sub>i</sub>)</th>
                             <th>Status Verifikasi</th>
-                            <th class="text-end pe-4" style="width: 190px;">Aksi Verifikasi</th>
+                            <th class="text-end pe-4" style="width: 200px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $index => $item)
+                        @forelse($wargas as $warga)
                             @php
-                                $isRankingModel = $item instanceof \App\Models\SpkRanking;
-                                $rank = $isRankingModel ? $item : $item->bantuanAktif?->spkRanking;
-                                $bantuan = $isRankingModel ? $item->bantuan : $item->bantuanAktif;
-                                $warga = $isRankingModel ? $bantuan?->warga : $item;
+                                $bantuan = $warga->bantuanAktif;
+                                $rank = $bantuan?->spkRanking;
                                 $rincian = $rank?->rincian_kriteria ?? [];
                             @endphp
                             <tr>
-                                <!-- Rank -->
                                 <td class="ps-4 text-center">
                                     @if($rank)
                                         @if($rank->ranking == 1)
@@ -336,16 +332,11 @@
                                     @endif
                                 </td>
 
-                                <!-- Warga & Wilayah -->
                                 <td>
-                                    @if($warga)
-                                        <a href="{{ route('warga.show', $warga->id_warga) }}" class="fw-bold text-dark text-decoration-none">
-                                            {{ $warga->nama }}
-                                        </a>
-                                        <small class="text-muted d-block">NIK: {{ $warga->nik }} | {{ $warga->wilayah->desa ?? '-' }}</small>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
+                                    <a href="{{ route('warga.show', $warga->id_warga) }}" class="fw-bold text-dark text-decoration-none">
+                                        {{ $warga->nama }}
+                                    </a>
+                                    <small class="text-muted d-block">NIK: {{ $warga->nik }} | {{ $warga->wilayah->desa ?? '-' }}</small>
                                     @if($bantuan && $bantuan->program)
                                         <span class="badge bg-light text-primary border mt-1" style="font-size: 0.7rem;">
                                             <i class="bi bi-gift-fill me-1"></i>{{ $bantuan->program->nama_program }}
@@ -353,7 +344,6 @@
                                     @endif
                                 </td>
 
-                                <!-- Kriteria C1..C5 -->
                                 <td class="text-center small">
                                     <span class="badge bg-light text-dark border">{{ $rincian['C1']['mentah'] ?? '-' }}</span>
                                 </td>
@@ -370,7 +360,6 @@
                                     <span class="badge bg-light text-dark border">{{ $rincian['C5']['mentah'] ?? '-' }}</span>
                                 </td>
 
-                                <!-- Skor Akhir SAW -->
                                 <td class="text-center">
                                     @if($rank)
                                         <div class="fw-bold text-primary">{{ number_format($rank->skor_akhir, 4) }}</div>
@@ -378,11 +367,10 @@
                                             <div class="progress-bar bg-primary" style="width: {{ min(100, $rank->skor_akhir * 100) }}%"></div>
                                         </div>
                                     @else
-                                        <span class="text-muted small">Belum dihitung</span>
+                                        <span class="text-muted small">Belum diranking</span>
                                     @endif
                                 </td>
 
-                                <!-- Status Verifikasi -->
                                 <td>
                                     @include('pages.warga.partials._status_badge', [
                                         'bantuan' => $bantuan,
@@ -391,31 +379,26 @@
                                     ])
                                 </td>
 
-                                <!-- Aksi -->
                                 <td class="text-end pe-4">
                                     <div class="btn-group btn-group-sm">
-                                        @if($warga)
-                                            <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Warga">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                        @endif
+                                        <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Lengkap">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
 
-                                        @if($rank && $warga)
+                                        @if($rank)
                                             <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalDetailSAW{{ $warga->id_warga }}" title="Rincian Perhitungan SAW">
                                                 <i class="bi bi-calculator"></i>
                                             </button>
                                         @endif
 
-                                        @if($warga)
-                                            @can('update', $warga)
-                                                <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-light-warning" title="Edit / Perbaiki Data Usulan">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                            @endcan
-                                        @endif
+                                        @can('update', $warga)
+                                            <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-light-warning" title="Edit / Perbaiki Usulan">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        @endcan
 
                                         @if($isDinas && $bantuan)
-                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Verifikasi Dinas">
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Penetapan Verifikasi Dinas">
                                                 <i class="bi bi-check2-square me-1"></i>Verifikasi
                                             </button>
                                         @endif
@@ -429,12 +412,10 @@
                                         <div class="avatar bg-light-warning text-warning mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle" style="width: 54px; height: 54px;">
                                             <i class="bi bi-award fs-2"></i>
                                         </div>
-                                        <h6 class="fw-bold text-dark mb-1">Belum ada hasil perankingan SPK untuk kriteria ini</h6>
-                                        @if($isDinas)
-                                            <p class="text-muted small mb-3">Silakan klik tombol <strong>Hitung Ulang SAW</strong> di kanan atas untuk memproses data usulan tahun {{ $tahun }}.</p>
-                                        @else
-                                            <p class="text-muted small mb-3">Belum ada hasil perankingan SAW atau usulan terdata untuk wilayah kelurahan Anda pada tahun {{ $tahun }}.</p>
-                                        @endif
+                                        <h6 class="fw-bold text-dark mb-1">Belum ada kandidat berstatus Diverifikasi Lapangan</h6>
+                                        <p class="text-muted small mb-0">
+                                            Usulan berstatus <em>Menunggu Verifikasi</em> perlu diverifikasi terlebih dahulu melalui halaman <a href="{{ route('warga.index') }}" class="fw-semibold text-decoration-none">Daftar Usulan</a> sebelum masuk ke tahap perankingan SPK SAW.
+                                        </p>
                                     </div>
                                 </td>
                             </tr>
@@ -444,13 +425,13 @@
             </div>
 
             <!-- Pagination Footer -->
-            @if(method_exists($items, 'hasPages') && $items->hasPages())
+            @if($wargas->hasPages())
                 <div class="card-footer bg-white border-0 py-3 d-flex flex-wrap justify-content-between align-items-center">
                     <small class="text-muted">
-                        Menampilkan <strong>{{ $items->firstItem() }}</strong> - <strong>{{ $items->lastItem() }}</strong> dari <strong>{{ $items->total() }}</strong> kandidat
+                        Menampilkan <strong>{{ $wargas->firstItem() }}</strong> - <strong>{{ $wargas->lastItem() }}</strong> dari <strong>{{ $wargas->total() }}</strong> kandidat
                     </small>
                     <div>
-                        {{ $items->links() }}
+                        {{ $wargas->links() }}
                     </div>
                 </div>
             @endif
@@ -458,21 +439,33 @@
     </div>
 </div>
 
-<!-- Modals Verifikasi & Detail SAW -->
-@foreach($items as $item)
+<!-- Modals Penetapan Verifikasi Dinas & Detail SAW -->
+@foreach($wargas as $warga)
     @php
-        $isRankingModel = $item instanceof \App\Models\SpkRanking;
-        $rank = $isRankingModel ? $item : $item->bantuanAktif?->spkRanking;
-        $bantuan = $isRankingModel ? $item->bantuan : $item->bantuanAktif;
-        $warga = $isRankingModel ? $bantuan?->warga : $item;
+        $bantuan = $warga->bantuanAktif;
+        $rank = $bantuan?->spkRanking;
     @endphp
-    @if($isDinas)
-        @include('pages.warga.partials._modal_verifikasi', ['bantuan' => $bantuan, 'warga' => $warga, 'rank' => $rank])
+    @if($isDinas && $bantuan)
+        @include('pages.warga.partials._modal_verifikasi', [
+            'bantuan' => $bantuan,
+            'warga' => $warga,
+            'rank' => $rank,
+            'allowedStatuses' => [
+                \App\Models\Bantuan::STATUS_DISETUJUI,
+                \App\Models\Bantuan::STATUS_DIVERIFIKASI,
+                \App\Models\Bantuan::STATUS_REVISI,
+                \App\Models\Bantuan::STATUS_DITOLAK,
+            ],
+            'modalTitle' => 'Penetapan Verifikasi Dinas',
+            'showSawBox' => true,
+        ])
     @endif
-    @include('pages.warga.partials._modal_detail_saw', ['warga' => $warga, 'rank' => $rank])
+    @if($rank)
+        @include('pages.warga.partials._modal_detail_saw', ['warga' => $warga, 'rank' => $rank])
+    @endif
 @endforeach
 
-<!-- Modal Konfigurasi Bobot Kriteria SAW -->
+<!-- Modal Konfigurasi Bobot Kriteria SAW (Khusus Dinas & Superadmin) -->
 @if($isDinas && $kriterias->isNotEmpty())
 <div class="modal fade" id="modalKriteriaSAW" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -551,27 +544,26 @@
     (function () {
         var inputs = document.querySelectorAll('.input-bobot-saw');
         var totalEl = document.getElementById('totalBobotSaw');
-        if (!inputs.length || !totalEl) return;
-
-        function updateTotalBobot() {
-            var sum = 0;
-            inputs.forEach(function (el) {
-                var val = parseFloat(el.value);
-                if (!isNaN(val)) sum += val;
-            });
-            totalEl.textContent = sum.toFixed(2);
-            if (Math.abs(sum - 1.0) <= 0.001) {
-                totalEl.classList.remove('text-danger');
-                totalEl.classList.add('text-primary');
-            } else {
-                totalEl.classList.remove('text-primary');
-                totalEl.classList.add('text-danger');
+        if (inputs.length && totalEl) {
+            function updateTotalBobot() {
+                var sum = 0;
+                inputs.forEach(function (el) {
+                    var val = parseFloat(el.value);
+                    if (!isNaN(val)) sum += val;
+                });
+                totalEl.textContent = sum.toFixed(2);
+                if (Math.abs(sum - 1.0) <= 0.001) {
+                    totalEl.classList.remove('text-danger');
+                    totalEl.classList.add('text-primary');
+                } else {
+                    totalEl.classList.remove('text-primary');
+                    totalEl.classList.add('text-danger');
+                }
             }
+            inputs.forEach(function (el) {
+                el.addEventListener('input', updateTotalBobot);
+            });
         }
-
-        inputs.forEach(function (el) {
-            el.addEventListener('input', updateTotalBobot);
-        });
     })();
 </script>
 @endpush

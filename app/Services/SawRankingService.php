@@ -36,10 +36,26 @@ class SawRankingService
 
         $bantuans = $query->get();
 
+        // Bersihkan seluruh ranking yang status bantuannya sudah tidak termasuk cakupan SAW (mis. status 0, 3, 4, atau non-aktif)
+        $staleNonEligibleQuery = SpkRanking::whereHas('bantuan', function ($q) use ($statuses) {
+            $q->where('is_aktif', false)
+              ->orWhereNotIn('status_bantuan', $statuses);
+        });
+
+        $cleanupQuery = SpkRanking::where('tahun_anggaran', $tahun);
+        if ($idProgram) {
+            $cleanupQuery->whereHas('bantuan', function ($q) use ($idProgram) {
+                $q->where('id_program', $idProgram);
+            });
+        }
+
         if ($bantuans->isEmpty()) {
+            (clone $staleNonEligibleQuery)->delete();
+            (clone $cleanupQuery)->delete();
+
             return [
                 'success' => false,
-                'message' => "Tidak ada data usulan bantuan yang sudah diverifikasi pada tahun anggaran {$tahun}.",
+                'message' => "Tidak ada data usulan bantuan berstatus Diverifikasi/Disetujui pada tahun anggaran {$tahun}.",
                 'total' => 0,
             ];
         }
@@ -177,9 +193,13 @@ class SawRankingService
         // 7. Simpan Hasil Perankingan ke Tabel `spk_ranking`
         DB::beginTransaction();
         try {
-            // Hapus riwayat ranking lama untuk tahun ini
+            // Bersihkan ranking tidak valid (status bukan [1,2]) serta ranking lama pada tahun anggaran/program terkait
+            (clone $staleNonEligibleQuery)->delete();
+            (clone $cleanupQuery)->delete();
             $bantuanIds = array_column($hasil, 'id_bantuan');
-            SpkRanking::whereIn('id_bantuan', $bantuanIds)->delete();
+            if (!empty($bantuanIds)) {
+                SpkRanking::whereIn('id_bantuan', $bantuanIds)->delete();
+            }
 
             foreach ($hasil as $index => $item) {
                 SpkRanking::create([

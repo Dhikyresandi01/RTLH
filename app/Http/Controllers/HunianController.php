@@ -65,6 +65,10 @@ class HunianController extends Controller
      */
     public function create(Request $request)
     {
+        if (Auth::check() && Auth::user()->cannot('create', Warga::class)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang untuk menambahkan data hunian.');
+        }
+
         $wargaQuery = Warga::with('wilayah');
 
         if (Auth::check()) {
@@ -76,6 +80,9 @@ class HunianController extends Controller
         $selectedWarga = null;
         if ($request->filled('id_warga')) {
             $selectedWarga = Warga::find($request->input('id_warga'));
+            if ($selectedWarga && Auth::check() && Auth::user()->cannot('view', $selectedWarga)) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki akses ke warga di luar wilayah kelurahan Anda.');
+            }
         }
 
         return view('pages.hunian.create', compact('wargas', 'selectedWarga'));
@@ -86,6 +93,10 @@ class HunianController extends Controller
      */
     public function store(Request $request)
     {
+        if (Auth::check() && Auth::user()->cannot('create', Warga::class)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang untuk menambahkan data hunian.');
+        }
+
         $validated = $request->validate([
             'id_warga'      => ['required', 'exists:warga,id_warga'],
             'status_rumah'  => ['required', 'integer', 'in:1,2,3'],
@@ -105,6 +116,13 @@ class HunianController extends Controller
             'status_rumah.required' => 'Status kepemilikan rumah wajib dipilih.',
             'status_tanah.required' => 'Status hak atas tanah wajib dipilih.',
         ]);
+
+        if (Auth::check()) {
+            $targetWarga = Warga::with('bantuanAktif')->findOrFail($validated['id_warga']);
+            if (Auth::user()->cannot('update', $targetWarga)) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang memindahkan hunian ke warga tersebut.');
+            }
+        }
 
         $validated['rumah_lain'] = $request->boolean('rumah_lain');
         $validated['tanah_lain'] = $request->boolean('tanah_lain');
@@ -150,15 +168,9 @@ class HunianController extends Controller
     {
         $hunian = Hunian::with('warga.bantuanAktif')->findOrFail($id);
 
-        // T2.4: Otorisasi wilayah & status jika user admin_kelurahan
-        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
-            if ((int) $hunian->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
-                abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data hunian di luar wilayah Anda.');
-            }
-            $bantuan = $hunian->warga?->bantuanAktif;
-            if ($bantuan && !in_array((int) $bantuan->status_bantuan, \App\Models\Bantuan::STATUS_EDITABLE_KELURAHAN, true)) {
-                abort(403, 'Akses Ditolak: Data hunian untuk warga dengan status ini sudah terkunci.');
-            }
+        // T2.4: Otorisasi via WargaPolicy (hanya superadmin & admin_kelurahan wilayah sama pada status 0/1/3; admin_dinas view-only)
+        if (Auth::check() && (!$hunian->warga || Auth::user()->cannot('update', $hunian->warga))) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data hunian ini atau status bantuan sudah terkunci.');
         }
 
         $wargaQuery = Warga::with('wilayah');
@@ -177,15 +189,9 @@ class HunianController extends Controller
     {
         $hunian = Hunian::with('warga.bantuanAktif')->findOrFail($id);
 
-        // T2.4: Otorisasi wilayah & status jika user admin_kelurahan
-        if (Auth::check() && Auth::user()->isAdminKelurahan()) {
-            if ((int) $hunian->warga?->id_wilayah !== (int) Auth::user()->id_wilayah) {
-                abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data hunian di luar wilayah Anda.');
-            }
-            $bantuan = $hunian->warga?->bantuanAktif;
-            if ($bantuan && !in_array((int) $bantuan->status_bantuan, \App\Models\Bantuan::STATUS_EDITABLE_KELURAHAN, true)) {
-                abort(403, 'Akses Ditolak: Data hunian untuk warga dengan status ini sudah terkunci.');
-            }
+        // T2.4: Otorisasi via WargaPolicy (hanya superadmin & admin_kelurahan wilayah sama pada status 0/1/3; admin_dinas view-only)
+        if (Auth::check() && (!$hunian->warga || Auth::user()->cannot('update', $hunian->warga))) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki hak untuk mengubah data hunian ini atau status bantuan sudah terkunci.');
         }
 
         $validated = $request->validate([
@@ -206,6 +212,13 @@ class HunianController extends Controller
             'status_rumah.required' => 'Status kepemilikan rumah wajib dipilih.',
             'status_tanah.required' => 'Status hak atas tanah wajib dipilih.',
         ]);
+
+        if (Auth::check()) {
+            $targetWarga = Warga::with('bantuanAktif')->findOrFail($validated['id_warga']);
+            if (Auth::user()->cannot('update', $targetWarga)) {
+                abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang memindahkan hunian ke warga tersebut.');
+            }
+        }
 
         $validated['rumah_lain'] = $request->boolean('rumah_lain');
         $validated['tanah_lain'] = $request->boolean('tanah_lain');

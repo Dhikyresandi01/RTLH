@@ -6,35 +6,110 @@ use App\Models\Bantuan;
 use App\Models\ProgramBantuan;
 use App\Models\SpkKriteria;
 use App\Models\SpkRanking;
+use App\Models\Warga;
 use App\Models\Wilayah;
 use App\Services\SawRankingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SpkController extends Controller
 {
     /**
-     * Menampilkan daftar perankingan SPK SAW dan status verifikasi dinas.
-     * Mengarahkan langsung ke data warga yang sudah diverifikasi (View 2 / Tab SPK).
+     * Menampilkan daftar perankingan SPK SAW & penetapan keputusan Dinas (View 2).
+     * Hanya menampilkan antrean berstatus Diverifikasi Lapangan (1).
+     * Admin kelurahan dapat memantau peringkat & catatan wilayahnya secara view-only.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
 
-        // Batasi akses hanya untuk Admin Dinas dan Super Admin
-        if (!$user || (!$user->isSuperadmin() && !$user->isAdminDinas())) {
-            abort(403, 'Akses Ditolak: Menu SPK dan Penetapan Bantuan hanya dapat diakses oleh pihak Dinas Perumahan dan Kawasan Permukiman.');
+        if (!$user) {
+            abort(403, 'Akses Ditolak: Silakan login terlebih dahulu.');
         }
 
-        // T2.5: Mengarah langsung ke data warga yang sudah diverifikasi (status_bantuan = 1)
-        $params = array_merge([
-            'status_bantuan' => Bantuan::STATUS_DIVERIFIKASI,
-            'tab'            => 'spk',
-            'sort'           => 'rank_asc',
-        ], $request->query());
+        $isDinas = $user->isSuperadmin() || $user->isAdminDinas();
 
-        return redirect()->route('warga.index', $params);
+        $availableYears = Bantuan::distinct()->orderByDesc('tahun_bantuan')->pluck('tahun_bantuan')->toArray();
+        $tahun = (int) $request->input('tahun', !empty($availableYears) ? $availableYears[0] : date('Y'));
+
+        $query = Warga::with([
+            'wilayah',
+            'bantuanAktif.program',
+            'bantuanAktif.verifikator',
+            'bantuanAktif.spkRanking',
+        ])
+        ->visibleTo($user)
+        ->whereHas('bantuanAktif', function ($q) use ($tahun, $request) {
+            $q->where('tahun_bantuan', $tahun)
+              ->where('status_bantuan', Bantuan::STATUS_DIVERIFIKASI);
+
+            if ($request->filled('id_program')) {
+                $q->where('id_program', $request->input('id_program'));
+            }
+        });
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('warga.nama', 'like', "%{$search}%")
+                  ->orWhere('warga.nik', 'like', "%{$search}%")
+                  ->orWhere('warga.no_kk', 'like', "%{$search}%");
+            });
+        }
+
+        if ($isDinas && $request->filled('id_wilayah')) {
+            $query->where('warga.id_wilayah', $request->input('id_wilayah'));
+        }
+
+        $statsQuery = clone $query;
+        $totalKandidat = (clone $statsQuery)->count();
+        $totalSudahRanking = (clone $statsQuery)->whereHas('bantuanAktif.spkRanking')->count();
+        $totalBelumRanking = max(0, $totalKandidat - $totalSudahRanking);
+
+        $totalDisetujui = Bantuan::aktif()
+            ->visibleTo($user)
+            ->where('tahun_bantuan', $tahun)
+            ->where('status_bantuan', Bantuan::STATUS_DISETUJUI)
+            ->count();
+
+        $avgSkor = (float) (SpkRanking::where('tahun_anggaran', $tahun)
+            ->whereHas('bantuan', function ($q) use ($user) {
+                $q->aktif()
+                  ->visibleTo($user)
+                  ->where('status_bantuan', Bantuan::STATUS_DIVERIFIKASI);
+            })
+            ->avg('skor_akhir') ?? 0);
+
+        $query->leftJoin('bantuan', function ($join) {
+            $join->on('warga.id_warga', '=', 'bantuan.id_warga')
+                 ->where('bantuan.is_aktif', true);
+        })
+        ->leftJoin('spk_ranking', 'bantuan.id_bantuan', '=', 'spk_ranking.id_bantuan')
+        ->select('warga.*')
+        ->orderByRaw('spk_ranking.ranking IS NULL, spk_ranking.ranking ASC')
+        ->latest('warga.id_warga');
+
+        $wargas = $query->paginate(15)->withQueryString();
+        $kriterias = SpkKriteria::orderBy('kode')->get();
+        $programs = ProgramBantuan::orderBy('nama_program')->get();
+        $wilayahs = Wilayah::orderBy('desa')->get();
+
+        return view('pages.spk.index', compact(
+            'wargas',
+            'tahun',
+            'availableYears',
+            'kriterias',
+            'programs',
+            'wilayahs',
+            'totalKandidat',
+            'totalSudahRanking',
+            'totalBelumRanking',
+            'totalDisetujui',
+            'avgSkor',
+            'isDinas'
+        ));
     }
 
     /**
@@ -59,18 +134,12 @@ class SpkController extends Controller
             $result = $sawService->hitungDanSimpan($tahun, $idProgram);
 
             if (!$result['success']) {
-                return redirect()->route('warga.index', [
-                    'status_bantuan' => Bantuan::STATUS_DIVERIFIKASI,
-                    'tab'            => 'spk',
-                    'sort'           => 'rank_asc',
-                ])->with('error', $result['message']);
+                return redirect()->route('spk.index', ['tahun' => $tahun])
+                    ->with('error', $result['message']);
             }
 
-            return redirect()->route('warga.index', [
-                'status_bantuan' => Bantuan::STATUS_DIVERIFIKASI,
-                'tab'            => 'spk',
-                'sort'           => 'rank_asc',
-            ])->with('success', "Proses perhitungan SAW selesai. Berhasil memperbarui perankingan untuk {$result['total']} kandidat yang telah diverifikasi.");
+            return redirect()->route('spk.index', ['tahun' => $tahun])
+                ->with('success', "Proses perhitungan SAW selesai. Berhasil memperbarui perankingan untuk {$result['total']} kandidat berstatus Diverifikasi/Disetujui.");
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal memproses perankingan SAW: ' . $e->getMessage());
         }
@@ -102,15 +171,29 @@ class SpkController extends Controller
 
         DB::beginTransaction();
         try {
+            $newStatus = (int) $validated['status_bantuan'];
+
             $bantuan->update([
-                'status_bantuan' => $validated['status_bantuan'],
+                'status_bantuan' => $newStatus,
                 'catatan_verifikasi' => $validated['catatan_verifikasi'],
                 'id_verifikator_bantuan' => $user->id,
             ]);
 
+            if (!in_array($newStatus, [Bantuan::STATUS_DIVERIFIKASI, Bantuan::STATUS_DISETUJUI], true)) {
+                SpkRanking::where('id_bantuan', $bantuan->id_bantuan)->delete();
+            }
+
             DB::commit();
 
-            $statusText = match ((int) $validated['status_bantuan']) {
+            if (in_array($newStatus, [Bantuan::STATUS_DIVERIFIKASI, Bantuan::STATUS_DISETUJUI], true)) {
+                try {
+                    app(SawRankingService::class)->hitungDanSimpan((int) ($bantuan->tahun_bantuan ?? date('Y')));
+                } catch (\Throwable $e) {
+                    Log::warning('Otomatisasi SAW pada verifikasiDinas: ' . $e->getMessage());
+                }
+            }
+
+            $statusText = match ($newStatus) {
                 Bantuan::STATUS_DISETUJUI => 'DISETUJUI',
                 Bantuan::STATUS_REVISI => 'DIKEMBALIKAN UNTUK REVISI',
                 Bantuan::STATUS_DITOLAK => 'DITOLAK',

@@ -25,13 +25,15 @@ class RealisasiController extends Controller
     }
 
     /**
-     * Menampilkan daftar bantuan yang telah terverifikasi/disetujui beserta progres realisasinya.
+     * Menampilkan daftar bantuan yang telah disetujui/direalisasikan beserta progres realisasinya.
+     * Admin kelurahan dapat memantau wilayahnya secara view-only.
      */
     public function index(Request $request)
     {
-        $this->authorizeAccess();
+        $user = Auth::user();
+        $isDinas = $user && ($user->isSuperadmin() || $user->isAdminDinas());
 
-        // Query data bantuan yang sudah terverifikasi (Disetujui / Diverifikasi / Direalisasikan)
+        // Query data bantuan yang sudah Disetujui Dinas (2) atau Direalisasikan (5)
         $query = Bantuan::with([
             'warga.wilayah',
             'program',
@@ -40,15 +42,19 @@ class RealisasiController extends Controller
         ])
         ->where('is_aktif', true);
 
-        // Filter status verifikasi dinas (default: hanya data yang sudah terverifikasi / disetujui / direalisasikan)
-        if ($request->filled('status_bantuan')) {
-            $query->where('status_bantuan', $request->input('status_bantuan'));
+        if ($user) {
+            $query->visibleTo($user);
+        }
+
+        // Batasi status yang tampil di View 4 hanya pada Disetujui Dinas (2) & Direalisasikan (5)
+        $allowedStatuses = [
+            Bantuan::STATUS_DISETUJUI,
+            Bantuan::STATUS_DIREALISASIKAN,
+        ];
+        if ($request->filled('status_bantuan') && in_array((int) $request->input('status_bantuan'), $allowedStatuses, true)) {
+            $query->where('status_bantuan', (int) $request->input('status_bantuan'));
         } else {
-            $query->whereIn('status_bantuan', [
-                Bantuan::STATUS_DISETUJUI,
-                Bantuan::STATUS_DIREALISASIKAN,
-                Bantuan::STATUS_DIVERIFIKASI,
-            ]);
+            $query->whereIn('status_bantuan', $allowedStatuses);
         }
 
         // Filter Pencarian (Nama Warga, NIK, atau No. KK)
@@ -61,8 +67,8 @@ class RealisasiController extends Controller
             });
         }
 
-        // Filter Kelurahan / Wilayah
-        if ($request->filled('id_wilayah')) {
+        // Filter Kelurahan / Wilayah (khusus Admin Dinas & Superadmin)
+        if ($isDinas && $request->filled('id_wilayah')) {
             $idWilayah = $request->input('id_wilayah');
             $query->whereHas('warga', function ($q) use ($idWilayah) {
                 $q->where('id_wilayah', $idWilayah);
@@ -154,6 +160,10 @@ class RealisasiController extends Controller
 
         $bantuan = Bantuan::with('warga')->findOrFail($id_bantuan);
 
+        if (!in_array((int) $bantuan->status_bantuan, [Bantuan::STATUS_DISETUJUI, Bantuan::STATUS_DIREALISASIKAN], true)) {
+            return back()->with('error', 'Aksi Ditolak: Hanya usulan berstatus Disetujui Dinas atau Direalisasikan yang dapat dicatat realisasinya.');
+        }
+
         DB::beginTransaction();
         try {
             $realisasi = Realisasi::firstOrNew(['id_bantuan' => $bantuan->id_bantuan]);
@@ -181,17 +191,21 @@ class RealisasiController extends Controller
             $realisasi->deskripsi = $request->input('deskripsi');
             $realisasi->save();
 
-            // Jika progres sudah mencapai 100%, tandai status bantuan sebagai DIREALLISASIKAN
+            // Jika progres sudah mencapai 100%, tandai status bantuan sebagai DIREALISASIKAN
             if ($realisasi->status === 100) {
                 $bantuan->update(['status_bantuan' => Bantuan::STATUS_DIREALISASIKAN]);
-            } elseif ($bantuan->status_bantuan === Bantuan::STATUS_DIREALISASIKAN) {
+            } elseif ((int) $bantuan->status_bantuan === Bantuan::STATUS_DIREALISASIKAN) {
                 // Jika diturunkan dari 100%, kembalikan ke status DISETUJUI
                 $bantuan->update(['status_bantuan' => Bantuan::STATUS_DISETUJUI]);
             }
 
             DB::commit();
 
-            return back()->with('success', "Progres realisasi untuk warga {$bantuan->warga->nama} berhasil disimpan ({$realisasi->status}%).");
+            $message = $realisasi->status === 100
+                ? "Progres realisasi untuk warga {$bantuan->warga->nama} selesai 100%. Status bantuan otomatis diperbarui menjadi Direalisasikan dan keluar dari daftar Calon Penerima Disetujui."
+                : "Progres realisasi untuk warga {$bantuan->warga->nama} berhasil disimpan ({$realisasi->status}%).";
+
+            return back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Gagal menyimpan progres realisasi: ' . $e->getMessage());
@@ -205,7 +219,7 @@ class RealisasiController extends Controller
     {
         $this->authorizeAccess();
 
-        $realisasi = Realisasi::with('bantuan.warga')->findOrFail($id_bantuan ?? $id_realisasi);
+        $realisasi = Realisasi::with('bantuan.warga')->findOrFail($id_realisasi);
 
         DB::beginTransaction();
         try {
@@ -217,7 +231,7 @@ class RealisasiController extends Controller
             }
 
             // Reset status bantuan ke disetujui jika sebelumnya direalisasikan
-            if ($realisasi->bantuan && $realisasi->bantuan->status_bantuan === Bantuan::STATUS_DIREALISASIKAN) {
+            if ($realisasi->bantuan && (int) $realisasi->bantuan->status_bantuan === Bantuan::STATUS_DIREALISASIKAN) {
                 $realisasi->bantuan->update(['status_bantuan' => Bantuan::STATUS_DISETUJUI]);
             }
 

@@ -224,11 +224,12 @@ class Track1FoundationTest extends TestCase
 
         $this->assertContains('role:superadmin', $routes->getByName('program-bantuan.index')->gatherMiddleware());
         $this->assertContains('role:superadmin', $routes->getByName('program-bantuan.store')->gatherMiddleware());
-        $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('verifikasi.index')->gatherMiddleware());
-        $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('spk.index')->gatherMiddleware());
+        $this->assertNotContains('role:superadmin,admin_dinas', $routes->getByName('verifikasi.index')->gatherMiddleware());
+        $this->assertNotContains('role:superadmin,admin_dinas', $routes->getByName('spk.index')->gatherMiddleware());
+        $this->assertNotContains('role:superadmin,admin_dinas', $routes->getByName('realisasi.index')->gatherMiddleware());
         $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('spk.hitung')->gatherMiddleware());
+        $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('spk.kriteria.update')->gatherMiddleware());
         $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('spk.verifikasi')->gatherMiddleware());
-        $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('realisasi.index')->gatherMiddleware());
         $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('realisasi.update')->gatherMiddleware());
         $this->assertContains('role:superadmin,admin_dinas', $routes->getByName('realisasi.destroy')->gatherMiddleware());
 
@@ -242,8 +243,11 @@ class Track1FoundationTest extends TestCase
             ->assertStatus(301)
             ->assertRedirect('/warga?search=andi');
 
-        // /verifikasi -> 302 redirect ke /spk untuk dinas/superadmin, 403 untuk kelurahan
-        $this->actingAs($kelurahan)->get('/verifikasi')->assertStatus(403);
+        // /verifikasi -> 302 redirect ke /spk untuk semua role terautentikasi
+        $this->actingAs($kelurahan)
+            ->get('/verifikasi?tahun=2026')
+            ->assertStatus(302)
+            ->assertRedirect('/spk?tahun=2026');
         $this->actingAs($adminDinas)
             ->get('/verifikasi?tahun=2026')
             ->assertStatus(302)
@@ -253,11 +257,13 @@ class Track1FoundationTest extends TestCase
             ->assertStatus(302)
             ->assertRedirect('/spk');
 
-        // Route terlarang berdasarkan role
+        // Route mutasi & master data terlarang berdasarkan role
         $this->actingAs($kelurahan)->get('/program-bantuan')->assertStatus(403);
         $this->actingAs($adminDinas)->get('/program-bantuan')->assertStatus(403);
-        $this->actingAs($kelurahan)->get('/spk')->assertStatus(403);
         $this->actingAs($kelurahan)->post('/spk/hitung')->assertStatus(403);
-        $this->actingAs($kelurahan)->get('/realisasi')->assertStatus(403);
+        $this->actingAs($kelurahan)->post('/spk/kriteria')->assertStatus(403);
+        $this->actingAs($kelurahan)->post('/spk/verifikasi/1')->assertStatus(403);
+        $this->actingAs($kelurahan)->post('/realisasi/1')->assertStatus(403);
+        $this->actingAs($kelurahan)->delete('/realisasi/1')->assertStatus(403);
     }
 }

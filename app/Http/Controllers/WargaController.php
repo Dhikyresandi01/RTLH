@@ -95,16 +95,16 @@ class WargaController extends Controller
             });
         }
 
-        // Opsi Pengurutan: Peringkat Prioritas SAW (Khusus Dinas/Superadmin) atau Terbaru
-        $isDinas = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
-        if ($isDinas && $request->input('sort') === 'rank_asc') {
+        // Opsi Pengurutan: Peringkat Prioritas SAW atau Terbaru
+        if ($request->input('sort') === 'rank_asc') {
             $query->leftJoin('bantuan', function ($join) {
                 $join->on('warga.id_warga', '=', 'bantuan.id_warga')
                      ->where('bantuan.is_aktif', true);
             })
             ->leftJoin('spk_ranking', 'bantuan.id_bantuan', '=', 'spk_ranking.id_bantuan')
             ->select('warga.*')
-            ->orderByRaw('spk_ranking.ranking IS NULL, spk_ranking.ranking ASC');
+            ->orderByRaw('spk_ranking.ranking IS NULL, spk_ranking.ranking ASC')
+            ->latest('warga.id_warga');
         } else {
             $query->latest('warga.id_warga');
         }
@@ -118,6 +118,24 @@ class WargaController extends Controller
     public function index(Request $request)
     {
         $query = $this->buildWargaQuery($request);
+        $hasStatusFilter = $request->has('status_bantuan')
+            && $request->input('status_bantuan') !== ''
+            && $request->input('status_bantuan') !== null;
+
+        // View 1 (Daftar Usulan): tampilkan status pra-verifikasi/tindak lanjut (0=Menunggu, 3=Revisi, 4=Ditolak + tanpa bantuan).
+        // Status 1 (Diverifikasi) tampil di View 2 (/spk), status 2 di View 3 (/penerima-disetujui), status 5 di View 4 (/realisasi).
+        if (!$hasStatusFilter) {
+            $query->where(function ($q) {
+                $q->whereDoesntHave('bantuanAktif')
+                  ->orWhereHas('bantuanAktif', function ($b) {
+                      $b->whereIn('status_bantuan', [
+                          Bantuan::STATUS_DIAJUKAN,
+                          Bantuan::STATUS_REVISI,
+                          Bantuan::STATUS_DITOLAK,
+                      ]);
+                  });
+            });
+        }
 
         $wargas = $query->paginate(10)->withQueryString();
         $wilayahs = Wilayah::orderBy('desa')->get();
@@ -181,6 +199,10 @@ class WargaController extends Controller
      */
     public function create()
     {
+        if (Auth::check() && Auth::user()->cannot('create', Warga::class)) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang untuk menambahkan calon penerima.');
+        }
+
         $wilayahs = Wilayah::orderBy('desa')->get();
         $programs = ProgramBantuan::where('is_aktif', true)->orderBy('nama_program')->get();
 
@@ -289,6 +311,9 @@ class WargaController extends Controller
 
         // T2.2: Jika user admin_kelurahan, paksa id_wilayah sesuai wilayah user
         if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if (!Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Akun kelurahan Anda belum terhubung ke data wilayah.');
+            }
             $validated['id_wilayah'] = Auth::user()->id_wilayah;
         }
 
@@ -466,8 +491,9 @@ class WargaController extends Controller
         }
 
         $wilayahs = Wilayah::orderBy('desa')->get();
+        $programs = ProgramBantuan::orderBy('nama_program')->get();
 
-        return view('pages.warga.edit', compact('warga', 'wilayahs'));
+        return view('pages.warga.edit', compact('warga', 'wilayahs', 'programs'));
     }
 
     /**
@@ -565,16 +591,23 @@ class WargaController extends Controller
             'foto_mck'       => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
-        // T2.2: Jika user admin_kelurahan, paksa id_wilayah sesuai wilayahnya
+        // T2.2: Jika user admin_kelurahan, paksa id_wilayah sesuai wilayahnya dan kunci status_update
         if (Auth::check() && Auth::user()->isAdminKelurahan()) {
+            if (!Auth::user()->id_wilayah) {
+                abort(403, 'Akses Ditolak: Akun kelurahan Anda belum terhubung ke data wilayah.');
+            }
             $validated['id_wilayah'] = Auth::user()->id_wilayah;
+            unset($validated['status_update']);
         }
 
         DB::beginTransaction();
         try {
             $validated['mampu_swadaya'] = $request->boolean('mampu_swadaya');
-            if ($request->filled('status_update')) {
+            $canUpdateStatus = Auth::check() && (Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas());
+            if ($canUpdateStatus && $request->filled('status_update')) {
                 $validated['status_update'] = $request->input('status_update');
+            } else {
+                unset($validated['status_update']);
             }
 
             // 1. Perbarui Data Warga
@@ -706,8 +739,8 @@ class WargaController extends Controller
             if (!empty($validated['id_program'])) {
                 $bantuanAktif = $warga->bantuanAktif;
                 if ($bantuanAktif) {
-                    // Hanya boleh update jenis program jika status belum Disetujui (2) atau Direalisasikan (5)
-                    if (!in_array((int) $bantuanAktif->status_bantuan, [Bantuan::STATUS_DISETUJUI, Bantuan::STATUS_DIREALISASIKAN], true)) {
+                    // Hanya boleh update jenis program jika status belum Disetujui (2), Ditolak (4), atau Direalisasikan (5)
+                    if (!in_array((int) $bantuanAktif->status_bantuan, [Bantuan::STATUS_DISETUJUI, Bantuan::STATUS_DITOLAK, Bantuan::STATUS_DIREALISASIKAN], true)) {
                         $bantuanAktif->update([
                             'id_program' => $validated['id_program'],
                         ]);

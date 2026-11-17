@@ -1,12 +1,12 @@
 @extends('app')
 
-@section('title', 'Daftar Usulan Calon Penerima RTLH')
-
-@section('content')
 @php
     $isDinas = Auth::user()->isSuperadmin() || Auth::user()->isAdminDinas();
 @endphp
 
+@section('title', 'Daftar Usulan Calon Penerima RTLH')
+
+@section('content')
 <style>
     .kpi-card {
         border-radius: 12px;
@@ -92,17 +92,21 @@
     <!-- Header Halaman -->
     <div class="page-title mb-4">
         <div class="row align-items-center">
-            <div class="col-12 col-md-7">
+            <div class="col-12 col-xl-7">
                 <h3 class="fw-bold mb-1 text-primary">
                     <i class="bi bi-people-fill me-2"></i>Daftar Usulan Calon Penerima RTLH
                 </h3>
                 @if($isDinas)
-                    <p class="text-muted mb-0">Monitoring usulan masuk lintas kelurahan sebelum proses perankingan SPK SAW dan penetapan verifikasi Dinas.</p>
+                    <p class="text-muted mb-0">
+                        Monitoring usulan pra-verifikasi lintas kelurahan (status <em>Menunggu Verifikasi</em>, <em>Perlu Revisi</em>, dan <em>Ditolak</em>). Gunakan tombol <strong>Verifikasi</strong> untuk meloloskan usulan ke antrean SPK SAW.
+                    </p>
                 @else
-                    <p class="text-muted mb-0">Pusat data usulan terpadu kependudukan warga, kepemilikan hunian, dan survei fisik bangunan wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.</p>
+                    <p class="text-muted mb-0">
+                        Pusat data usulan terpadu kependudukan warga, kepemilikan hunian, dan survei fisik bangunan wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.
+                    </p>
                 @endif
             </div>
-            <div class="col-12 col-md-5 text-md-end mt-3 mt-md-0 d-flex flex-wrap justify-content-md-end gap-2">
+            <div class="col-12 col-xl-5 text-xl-end mt-3 mt-xl-0 d-flex flex-wrap justify-content-xl-end gap-2">
                 <!-- Tombol Ekspor Excel Terpadu -->
                 <a href="{{ route('warga.export', request()->query()) }}" class="btn btn-success shadow-sm px-3 py-2 fw-semibold" title="Unduh Data Calon Penerima Format Excel (.xls)">
                     <i class="bi bi-file-earmark-excel-fill me-1"></i> Ekspor Excel
@@ -138,7 +142,24 @@
         </div>
     @endif
 
-    <!-- Kartu Statistik KPI Ringkasan Usulan -->
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible show fade shadow-sm mb-4">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-danger"></i>
+                <div>
+                    <strong>Validasi gagal:</strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <!-- Kartu Statistik KPI Ringkasan -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card shadow-sm border-0 border-start border-primary border-4 h-100 kpi-card">
@@ -148,7 +169,7 @@
                     </div>
                     <div>
                         <div class="text-muted small fw-semibold">
-                            {{ $isDinas ? 'Total Usulan Terdata' : 'Usulan di Kelurahan' }}
+                            {{ $isDinas ? 'Total Usulan Masuk' : 'Usulan di Kelurahan' }}
                         </div>
                         <h4 class="fw-bold mb-0 text-dark">{{ $wargas->total() }}</h4>
                     </div>
@@ -164,9 +185,9 @@
                             <i class="bi bi-hourglass-split fs-4"></i>
                         </div>
                         <div>
-                            <div class="text-muted small fw-semibold">Menunggu / Diverifikasi</div>
+                            <div class="text-muted small fw-semibold">Menunggu Verifikasi</div>
                             <h4 class="fw-bold mb-0 text-dark">
-                                {{ $wargas->filter(fn($w) => in_array((int) $w->bantuanAktif?->status_bantuan, [\App\Models\Bantuan::STATUS_DIAJUKAN, \App\Models\Bantuan::STATUS_DIVERIFIKASI], true) && $w->bantuanAktif !== null)->count() }}
+                                {{ $wargas->filter(fn($w) => $w->bantuanAktif !== null && (int) $w->bantuanAktif->status_bantuan === \App\Models\Bantuan::STATUS_DIAJUKAN)->count() }}
                             </h4>
                         </div>
                     </div>
@@ -216,7 +237,7 @@
                         <div>
                             <div class="text-muted small fw-semibold">Perlu Revisi</div>
                             <h4 class="fw-bold mb-0 text-dark">
-                                {{ $wargas->filter(fn($w) => $w->bantuanAktif?->status_bantuan == \App\Models\Bantuan::STATUS_REVISI)->count() }}
+                                {{ $wargas->filter(fn($w) => $w->bantuanAktif !== null && (int) $w->bantuanAktif->status_bantuan === \App\Models\Bantuan::STATUS_REVISI)->count() }}
                             </h4>
                         </div>
                     </div>
@@ -269,9 +290,8 @@
                     <div class="col-12 col-md-2">
                         <label class="form-label small fw-semibold text-muted mb-1">Status Usulan</label>
                         <select name="status_bantuan" class="form-select form-select-sm">
-                            <option value="">Semua Status Usulan</option>
+                            <option value="">Semua Status View 1</option>
                             <option value="{{ \App\Models\Bantuan::STATUS_DIAJUKAN }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DIAJUKAN ? 'selected' : '' }}>Menunggu Verifikasi</option>
-                            <option value="{{ \App\Models\Bantuan::STATUS_DIVERIFIKASI }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DIVERIFIKASI ? 'selected' : '' }}>Diverifikasi Lapangan</option>
                             <option value="{{ \App\Models\Bantuan::STATUS_REVISI }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_REVISI ? 'selected' : '' }}>Perlu Revisi</option>
                             <option value="{{ \App\Models\Bantuan::STATUS_DITOLAK }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DITOLAK ? 'selected' : '' }}>Ditolak</option>
                         </select>
@@ -326,16 +346,18 @@
         </div>
     </div>
 
-    <!-- Card Utama: Daftar Usulan RTLH -->
+    <!-- Card Utama -->
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center">
             <div>
-                <h5 class="card-title fw-bold text-dark mb-0">Daftar Usulan Calon Penerima RTLH</h5>
+                <h5 class="card-title fw-bold text-dark mb-0">
+                    Daftar Usulan Calon Penerima RTLH
+                </h5>
                 <small class="text-muted">
                     @if($isDinas)
-                        Daftar usulan pra-penetapan dari seluruh kelurahan. Untuk proses perhitungan SAW &amp; verifikasi keputusan, buka menu <strong>Verifikasi &amp; SPK</strong>.
+                        Menampilkan usulan berstatus <code>Menunggu Verifikasi</code>, <code>Perlu Revisi</code>, dan <code>Ditolak</code> dari seluruh kelurahan. Usulan yang lolos verifikasi lapangan berpindah ke menu <a href="{{ route('spk.index') }}" class="fw-semibold text-decoration-none">Verifikasi Dinas &amp; SPK SAW</a>.
                     @else
-                        Daftar usulan calon penerima bantuan RTLH di wilayah Kelurahan {{ Auth::user()->wilayah->desa ?? '' }}.
+                        Menampilkan usulan di wilayah Kelurahan {{ Auth::user()->wilayah->desa ?? '' }} sebelum lolos verifikasi lapangan (<code>Menunggu Verifikasi</code>, <code>Perlu Revisi</code>, <code>Ditolak</code>).
                     @endif
                 </small>
             </div>
@@ -344,7 +366,7 @@
             </span>
         </div>
 
-        <!-- Toolbar Tab Navigasi Pills (3 Tab Usulan & Survei) -->
+        <!-- Toolbar Tab Navigasi Pills (3 Tab View 1) -->
         <div class="bg-light px-3 py-2 border-bottom">
             <ul class="nav nav-pills nav-pills-custom gap-2 mb-0" id="tableTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -369,7 +391,7 @@
         <div class="card-body p-0">
             <div class="tab-content" id="tableTabsContent">
 
-                <!-- ================= TAB 1: RINGKASAN USULAN ================= -->
+                <!-- ================= TAB 1: RINGKASAN USULAN (VIEW 1) ================= -->
                 <div class="tab-pane fade show active" id="content-master" role="tabpanel">
                     <div class="table-responsive">
                         <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
@@ -382,7 +404,7 @@
                                     <th>Kondisi Konstruksi RTLH</th>
                                     <th>Jenis Bantuan</th>
                                     <th>Status Usulan</th>
-                                    <th class="text-end pe-4" style="width: 130px;">Aksi</th>
+                                    <th class="text-end pe-4" style="width: 190px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -479,7 +501,7 @@
                                         <td>
                                             @include('pages.warga.partials._status_badge', [
                                                 'bantuan' => $bantuan,
-                                                'showVerifikator' => $isDinas,
+                                                'showVerifikator' => true,
                                                 'showCatatan' => true,
                                             ])
                                         </td>
@@ -488,6 +510,12 @@
                                                 <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Lengkap">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
+
+                                                @if($isDinas && $bantuan)
+                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Verifikasi Lapangan">
+                                                        <i class="bi bi-clipboard-check me-1"></i>Verifikasi
+                                                    </button>
+                                                @endif
 
                                                 @can('update', $warga)
                                                     <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-light-warning" title="Edit Data">
@@ -514,8 +542,8 @@
                                                 <div class="avatar bg-light-primary text-primary mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle" style="width: 54px; height: 54px;">
                                                     <i class="bi bi-people fs-2"></i>
                                                 </div>
-                                                <h6 class="fw-bold text-dark mb-1">Belum ada data usulan calon penerima RTLH</h6>
-                                                <p class="text-muted small mb-3">Belum ada usulan yang tercatat atau sesuai dengan filter yang dipilih.</p>
+                                                <h6 class="fw-bold text-dark mb-1">Belum ada data usulan di daftar antrean awal</h6>
+                                                <p class="text-muted small mb-3">Belum ada usulan berstatus Menunggu Verifikasi, Perlu Revisi, atau Ditolak yang sesuai dengan filter yang dipilih.</p>
                                                 @can('create', \App\Models\Warga::class)
                                                     <a href="{{ route('warga.create') }}" class="btn btn-sm btn-primary px-3 shadow-sm">
                                                         <i class="bi bi-plus-lg me-1"></i> Tambah Calon Penerima Baru
@@ -538,7 +566,7 @@
             @if($wargas->hasPages())
                 <div class="card-footer bg-white border-0 py-3 d-flex flex-wrap justify-content-between align-items-center">
                     <small class="text-muted">
-                        Menampilkan <strong>{{ $wargas->firstItem() }}</strong> - <strong>{{ $wargas->lastItem() }}</strong> dari <strong>{{ $wargas->total() }}</strong> usulan calon penerima
+                        Menampilkan <strong>{{ $wargas->firstItem() }}</strong> - <strong>{{ $wargas->lastItem() }}</strong> dari <strong>{{ $wargas->total() }}</strong> calon penerima
                     </small>
                     <div>
                         {{ $wargas->links() }}
@@ -548,4 +576,26 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Verifikasi Lapangan (Khusus Dinas & Superadmin untuk meloloskan status 0/3 ke status 1) -->
+@if($isDinas)
+    @foreach($wargas as $warga)
+        @php
+            $bantuan = $warga->bantuanAktif;
+        @endphp
+        @if($bantuan)
+            @include('pages.warga.partials._modal_verifikasi', [
+                'bantuan' => $bantuan,
+                'warga' => $warga,
+                'allowedStatuses' => [
+                    \App\Models\Bantuan::STATUS_DIVERIFIKASI,
+                    \App\Models\Bantuan::STATUS_REVISI,
+                    \App\Models\Bantuan::STATUS_DITOLAK,
+                ],
+                'modalTitle' => 'Verifikasi Lapangan',
+                'showSawBox' => false,
+            ])
+        @endif
+    @endforeach
+@endif
 @endsection
