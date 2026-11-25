@@ -333,7 +333,7 @@
                                 </td>
 
                                 <td>
-                                    <a href="{{ route('warga.show', $warga->id_warga) }}" class="fw-bold text-dark text-decoration-none">
+                                    <a href="{{ route('warga.show', ['warga' => $warga->id_warga, 'from' => 'spk']) }}" class="fw-bold text-dark text-decoration-none">
                                         {{ $warga->nama }}
                                     </a>
                                     <small class="text-muted d-block">NIK: {{ $warga->nik }} | {{ $warga->wilayah->desa ?? '-' }}</small>
@@ -381,7 +381,7 @@
 
                                 <td class="text-end pe-4">
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Lengkap">
+                                        <a href="{{ route('warga.show', ['warga' => $warga->id_warga, 'from' => 'spk']) }}" class="btn btn-light-primary" title="Detail Lengkap">
                                             <i class="bi bi-eye"></i>
                                         </a>
 
@@ -392,14 +392,14 @@
                                         @endif
 
                                         @can('update', $warga)
-                                            <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-light-warning" title="Edit / Perbaiki Usulan">
+                                            <a href="{{ route('warga.edit', ['warga' => $warga->id_warga, 'from' => 'spk']) }}" class="btn btn-light-warning" title="Edit / Perbaiki Usulan">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         @endcan
 
                                         @if($isDinas && $bantuan)
-                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Penetapan Verifikasi Dinas">
-                                                <i class="bi bi-check2-square me-1"></i>Verifikasi
+                                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalValidasiBantuan{{ $bantuan->id_bantuan }}" title="Validasi & Tetapkan Bantuan">
+                                                <i class="bi bi-patch-check-fill me-1"></i>Validasi Bantuan
                                             </button>
                                         @endif
                                     </div>
@@ -439,25 +439,18 @@
     </div>
 </div>
 
-<!-- Modals Penetapan Verifikasi Dinas & Detail SAW -->
+<!-- Modals Validasi Bantuan Dinas & Detail SAW -->
 @foreach($wargas as $warga)
     @php
         $bantuan = $warga->bantuanAktif;
         $rank = $bantuan?->spkRanking;
     @endphp
     @if($isDinas && $bantuan)
-        @include('pages.warga.partials._modal_verifikasi', [
+        @include('pages.spk.partials._modal_validasi_bantuan', [
             'bantuan' => $bantuan,
             'warga' => $warga,
             'rank' => $rank,
-            'allowedStatuses' => [
-                \App\Models\Bantuan::STATUS_DISETUJUI,
-                \App\Models\Bantuan::STATUS_DIVERIFIKASI,
-                \App\Models\Bantuan::STATUS_REVISI,
-                \App\Models\Bantuan::STATUS_DITOLAK,
-            ],
-            'modalTitle' => 'Penetapan Verifikasi Dinas',
-            'showSawBox' => true,
+            'programs' => $programs,
         ])
     @endif
     @if($rank)

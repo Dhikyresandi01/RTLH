@@ -55,7 +55,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark">Keputusan Verifikasi <span class="text-danger">*</span></label>
-                        <select name="status_bantuan" class="form-select" required>
+                        <select name="status_bantuan" class="form-select select-keputusan-verifikasi" id="selectStatus{{ $bantuan->id_bantuan }}" required onchange="handleVerifikasiChange(this, '{{ $bantuan->id_bantuan }}')">
                             @foreach($allowedStatuses as $code)
                                 @if(isset($statusOptions[$code]))
                                     <option value="{{ $code }}" {{ $defaultSelected === $code ? 'selected' : '' }}>
@@ -66,10 +66,42 @@
                         </select>
                     </div>
 
+                    <!-- Pilihan Program Bantuan (Hanya tampil jika pilihan status mencakup Disetujui/Validasi) -->
+                    @if(in_array(\App\Models\Bantuan::STATUS_DISETUJUI, $allowedStatuses, true))
+                    <div class="mb-3" id="wrapperProgramBantuan{{ $bantuan->id_bantuan }}">
+                        <label class="form-label fw-bold text-dark d-flex justify-content-between align-items-center">
+                            <span>Alokasi Program Bantuan</span>
+                            <span class="badge bg-light text-primary border" style="font-size: 0.7rem;">Wewenang Dinas</span>
+                        </label>
+                        @php
+                            $programsList = $programs ?? \App\Models\ProgramBantuan::orderBy('nama_program')->get();
+                        @endphp
+                        <select name="id_program" class="form-select" id="selectProgram{{ $bantuan->id_bantuan }}">
+                            <option value="">-- Tetapkan Program Bantuan --</option>
+                            @foreach($programsList as $prog)
+                                <option value="{{ $prog->id_program }}" {{ (int)($bantuan->id_program ?? 0) === (int)$prog->id_program ? 'selected' : '' }}>
+                                    {{ $prog->nama_program }} {{ $prog->sumber_dana ? '('.$prog->sumber_dana.')' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Pilih alokasi bantuan resmi yang ditetapkan Dinas untuk usulan ini.</small>
+                    </div>
+                    @endif
+
                     <div class="mb-0">
-                        <label class="form-label fw-bold text-dark">Catatan Resmi Verifikator <span class="text-danger">*</span></label>
-                        <textarea name="catatan_verifikasi" class="form-control" rows="4" maxlength="1000" placeholder="Tuliskan catatan verifikasi fisik, kelayakan faktual, atau alasan revisi/penolakan..." required>{{ $bantuan->catatan_verifikasi }}</textarea>
-                        <small class="text-muted">Maksimal 1000 karakter. Catatan ini akan terlihat oleh petugas kelurahan.</small>
+                        <label class="form-label fw-bold text-dark">
+                            Catatan Resmi Verifikator 
+                            <span class="text-danger {{ in_array($defaultSelected, [\App\Models\Bantuan::STATUS_REVISI, \App\Models\Bantuan::STATUS_DITOLAK], true) ? '' : 'd-none' }}" id="reqStar{{ $bantuan->id_bantuan }}">*</span>
+                            <span class="text-muted fw-normal small {{ in_array($defaultSelected, [\App\Models\Bantuan::STATUS_REVISI, \App\Models\Bantuan::STATUS_DITOLAK], true) ? 'd-none' : '' }}" id="optLabel{{ $bantuan->id_bantuan }}">(Opsional)</span>
+                        </label>
+                        <textarea name="catatan_verifikasi" 
+                                  id="catatanVerifikasi{{ $bantuan->id_bantuan }}" 
+                                  class="form-control" 
+                                  rows="4" 
+                                  maxlength="4000" 
+                                  placeholder="Tuliskan catatan verifikasi fisik, kelayakan faktual, atau alasan revisi/penolakan..."
+                                  {{ in_array($defaultSelected, [\App\Models\Bantuan::STATUS_REVISI, \App\Models\Bantuan::STATUS_DITOLAK], true) ? 'required' : '' }}>{{ $bantuan->catatan_verifikasi }}</textarea>
+                        <small class="text-muted">Maksimal 4000 karakter. Wajib diisi jika usulan ditolak atau perlu revisi.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -82,4 +114,31 @@
         </form>
     </div>
 </div>
+
+<script>
+if (typeof window.handleVerifikasiChange === 'undefined') {
+    window.handleVerifikasiChange = function(selectElem, idBantuan) {
+        const status = String(selectElem.value);
+        const textarea = document.getElementById('catatanVerifikasi' + idBantuan);
+        const reqStar = document.getElementById('reqStar' + idBantuan);
+        const optLabel = document.getElementById('optLabel' + idBantuan);
+
+        // Status 3 = Perlu Revisi, Status 4 = Ditolak
+        const wajibCatatan = (status === '3' || status === '4');
+
+        if (textarea) {
+            textarea.required = wajibCatatan;
+        }
+        if (reqStar && optLabel) {
+            if (wajibCatatan) {
+                reqStar.classList.remove('d-none');
+                optLabel.classList.add('d-none');
+            } else {
+                reqStar.classList.add('d-none');
+                optLabel.classList.remove('d-none');
+            }
+        }
+    };
+}
+</script>
 @endif

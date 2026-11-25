@@ -417,12 +417,17 @@ class WargaController extends Controller
                 }
             }
 
-            // 7. Otomatis buatkan usulan bantuan awal jika jenis bantuan dipilih
-            if (!empty($validated['id_program'])) {
-                $program = ProgramBantuan::findOrFail($validated['id_program']);
+            // 7. Otomatis buatkan usulan bantuan awal
+            $idProgram = !empty($validated['id_program']) ? $validated['id_program'] : null;
+            if (!$idProgram) {
+                // Default ke program bantuan aktif pertama agar usulan tetap terdaftar untuk diverifikasi
+                $idProgram = ProgramBantuan::where('is_aktif', true)->value('id_program') ?? ProgramBantuan::value('id_program');
+            }
+
+            if ($idProgram) {
                 Bantuan::create([
                     'id_warga' => $warga->id_warga,
-                    'id_program' => $program->id_program,
+                    'id_program' => $idProgram,
                     'tahun_bantuan' => (int) date('Y'),
                     'id_user_pengajuan' => Auth::id() ?? 1,
                     'tgl_pengajuan' => now(),
@@ -736,8 +741,8 @@ class WargaController extends Controller
             }
 
             // 7. Perbarui program bantuan pada bantuanAktif atau buat baru jika belum ada (T2.3)
+            $bantuanAktif = $warga->bantuanAktif;
             if (!empty($validated['id_program'])) {
-                $bantuanAktif = $warga->bantuanAktif;
                 if ($bantuanAktif) {
                     // Hanya boleh update jenis program jika status belum Disetujui (2), Ditolak (4), atau Direalisasikan (5)
                     if (!in_array((int) $bantuanAktif->status_bantuan, [Bantuan::STATUS_DISETUJUI, Bantuan::STATUS_DITOLAK, Bantuan::STATUS_DIREALISASIKAN], true)) {
@@ -746,7 +751,7 @@ class WargaController extends Controller
                         ]);
                     }
                 } else {
-                    Bantuan::create([
+                    $bantuanAktif = Bantuan::create([
                         'id_warga' => $warga->id_warga,
                         'id_program' => $validated['id_program'],
                         'tahun_bantuan' => (int) date('Y'),
@@ -758,6 +763,25 @@ class WargaController extends Controller
                 }
             }
 
+            // Otomatisasi Status Usulan Revisi:
+            // Jika data usulan yang saat ini berstatus 'Perlu Revisi' (3) diedit dan disimpan kembali oleh Kelurahan,
+            // statusnya otomatis dialihkan kembali menjadi 'Menunggu Verifikasi' (0) agar Dinas dapat memverifikasi ulang.
+            $isRevisiUpdated = false;
+            if ($bantuanAktif && (int) $bantuanAktif->status_bantuan === Bantuan::STATUS_REVISI) {
+                $userNama = Auth::user()?->name ?? (Auth::user()?->username ?? 'Petugas Kelurahan');
+                $timestamp = now()->translatedFormat('d/m/Y H:i');
+                $catatanLama = trim($bantuanAktif->catatan_verifikasi ?? '');
+                $catatanTambahan = "[Perbaikan usulan diserahkan oleh {$userNama} pada {$timestamp}]";
+                $catatanGabungan = $catatanLama !== '' ? "{$catatanLama}\n{$catatanTambahan}" : $catatanTambahan;
+
+                $bantuanAktif->update([
+                    'status_bantuan' => Bantuan::STATUS_DIAJUKAN,
+                    'catatan_verifikasi' => $catatanGabungan,
+                ]);
+
+                $isRevisiUpdated = true;
+            }
+
             DB::commit();
 
             // Otomatis hitung ulang perankingan SAW untuk seluruh data terpadu
@@ -767,8 +791,12 @@ class WargaController extends Controller
                 Log::warning('Otomatisasi SAW pada update warga: ' . $e->getMessage());
             }
 
+            $successMessage = $isRevisiUpdated
+                ? "Data perbaikan warga {$warga->nama} berhasil disimpan dan status usulan telah otomatis dikembalikan ke 'Menunggu Verifikasi' untuk ditinjau kembali oleh Dinas."
+                : 'Data terpadu calon penerima berhasil diperbarui dan ranking prioritas SPK telah disesuaikan.';
+
             return redirect()->route('warga.index')
-                ->with('success', 'Data terpadu calon penerima berhasil diperbarui dan ranking prioritas SPK telah disesuaikan.');
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             DB::rollBack();
 

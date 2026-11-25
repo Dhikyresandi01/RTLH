@@ -20,13 +20,31 @@
 
 @section('content')
 <div class="page-heading">
+    @php
+        $navFrom = request('from');
+        $backEditUrl = match($navFrom) {
+            'spk' => route('spk.index'),
+            'disetujui' => route('warga.disetujui'),
+            'realisasi' => route('realisasi.index'),
+            'dashboard' => route('dashboard'),
+            default => route('warga.index'),
+        };
+        $backEditLabel = match($navFrom) {
+            'spk' => 'Verifikasi & SPK',
+            'disetujui' => 'Penerima Disetujui',
+            'realisasi' => 'Realisasi Bantuan',
+            'dashboard' => 'Dashboard',
+            default => 'Daftar Usulan',
+        };
+    @endphp
+
     <!-- Page Header -->
     <div class="page-title mb-4">
         <div class="row align-items-center">
             <div class="col-12 col-md-7">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{{ route('warga.index') }}">Daftar Usulan</a></li>
+                        <li class="breadcrumb-item"><a href="{{ $backEditUrl }}">{{ $backEditLabel }}</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Edit Terpadu</li>
                     </ol>
                 </nav>
@@ -34,11 +52,11 @@
                 <p class="text-muted small mb-0">Ubah data identitas calon penerima, legalitas kepemilikan hunian, dan evaluasi fisik bangunan.</p>
             </div>
             <div class="col-12 col-md-5 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
-                <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-outline-info">
+                <a href="{{ route('warga.show', ['warga' => $warga->id_warga, 'from' => $navFrom]) }}" class="btn btn-outline-info">
                     <i class="bi bi-eye me-1"></i> Lihat Profil
                 </a>
-                <a href="{{ route('warga.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i> Kembali
+                <a href="{{ $backEditUrl }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali ke {{ $backEditLabel }}
                 </a>
             </div>
         </div>

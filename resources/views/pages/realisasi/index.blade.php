@@ -97,11 +97,11 @@
     </div>
 
     @if(!$isDinas)
-        <div class="alert alert-light-info border border-info-subtle shadow-sm mb-4">
+        <div class="alert alert-light-success border border-success-subtle shadow-sm mb-4">
             <div class="d-flex align-items-center">
-                <i class="bi bi-eye-fill text-info fs-5 me-2"></i>
+                <i class="bi bi-hammer text-success fs-5 me-2"></i>
                 <small class="text-dark mb-0">
-                    <strong>Mode Pantau Kelurahan (View-Only):</strong> Anda dapat memantau progres fisik dan galeri dokumentasi realisasi untuk warga di kelurahan Anda. Perubahan atau penghapusan progres realisasi hanya dilakukan oleh Admin Dinas / Superadmin.
+                    <strong>Pelaporan Realisasi Fisik Kelurahan:</strong> Petugas Kelurahan bertugas menginput dan memperbarui progres fisik (titik 0%, 25%, 50%, 100%) serta mengunggah dokumentasi foto lapangan & bukti kuitansi untuk warga penerima bantuan di wilayah Anda. Laporan akan diverifikasi oleh Tim Dinas.
                 </small>
             </div>
         </div>
@@ -309,6 +309,7 @@
                                 $warga = $bantuan->warga;
                                 $realisasi = $bantuan->realisasiTerbaru;
                                 $progres = $realisasi ? (int) $realisasi->status : 0;
+                                $canInputRealisasi = $isDinas || (Auth::check() && Auth::user()->isAdminKelurahan() && (int)Auth::user()->id_wilayah === (int)($warga?->id_wilayah ?? 0));
                             @endphp
                             <tr>
                                 <td class="ps-4 fw-semibold text-muted">
@@ -318,7 +319,7 @@
                                 <!-- Identitas Penerima -->
                                 <td>
                                     @if($warga)
-                                        <a href="{{ route('warga.show', $warga->id_warga) }}" class="fw-bold text-dark text-decoration-none">
+                                        <a href="{{ route('warga.show', ['warga' => $warga->id_warga, 'from' => 'realisasi']) }}" class="fw-bold text-dark text-decoration-none">
                                             {{ $warga->nama }}
                                         </a>
                                         <small class="text-muted d-block">NIK: {{ $warga->nik }}</small>
@@ -390,8 +391,8 @@
                                     <div class="d-flex gap-1 align-items-center">
                                         @foreach(['foto_0' => '0%', 'foto_25' => '25%', 'foto_50' => '50%', 'foto_100' => '100%'] as $fotoKey => $fotoLabel)
                                             @if($realisasi && $realisasi->$fotoKey)
-                                                <a href="{{ asset('storage/' . $realisasi->$fotoKey) }}" target="_blank" title="Foto {{ $fotoLabel }}">
-                                                    <img src="{{ asset('storage/' . $realisasi->$fotoKey) }}" alt="{{ $fotoLabel }}" class="thumb-foto">
+                                                <a href="javascript:void(0)" onclick="bukaPreviewFoto('{{ asset('storage/' . $realisasi->$fotoKey) }}', 'Dokumentasi Progres Fisik {{ $fotoLabel }} - {{ addslashes($bantuan->warga->nama ?? '') }}', 'progres_{{ $fotoLabel }}_{{ $bantuan->warga->nik ?? 'penerima' }}.jpg')" title="Klik untuk lihat & unduh Foto {{ $fotoLabel }}">
+                                                    <img src="{{ asset('storage/' . $realisasi->$fotoKey) }}" alt="{{ $fotoLabel }}" class="thumb-foto" style="cursor: pointer;">
                                                 </a>
                                             @else
                                                 <span class="thumb-empty" title="Foto {{ $fotoLabel }} belum ada">{{ $fotoLabel }}</span>
@@ -403,9 +404,9 @@
                                 <!-- Kuitansi / SPJ -->
                                 <td>
                                     @if($realisasi && $realisasi->kwitansi)
-                                        <a href="{{ asset('storage/' . $realisasi->kwitansi) }}" target="_blank" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.78rem;">
+                                        <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.78rem;" onclick="bukaPreviewFoto('{{ asset('storage/' . $realisasi->kwitansi) }}', 'Bukti Kwitansi / SPJ - {{ addslashes($bantuan->warga->nama ?? '') }}', 'SPJ_{{ $bantuan->warga->nik ?? 'penerima' }}.jpg')">
                                             <i class="bi bi-file-earmark-check me-1"></i> Lihat SPJ
-                                        </a>
+                                        </button>
                                     @else
                                         <span class="text-muted small">Belum ada</span>
                                     @endif
@@ -414,17 +415,19 @@
                                 <!-- Aksi -->
                                 <td class="text-end pe-4">
                                     <div class="btn-group btn-group-sm">
-                                        @if($isDinas)
-                                            <!-- Tombol Update Realisasi -->
+                                        @if($canInputRealisasi)
+                                            <!-- Tombol Input / Update Realisasi (Kelurahan Wilayahnya & Dinas) -->
                                             <button type="button" 
                                                     class="btn btn-primary" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#modalUpdateRealisasi{{ $bantuan->id_bantuan }}" 
-                                                    title="Input / Update Progres Realisasi">
-                                                <i class="bi bi-pencil-square me-1"></i> Update
+                                                    title="{{ $isDinas ? 'Verifikasi & Perbarui Data Realisasi' : 'Input / Laporkan Progres Fisik' }}">
+                                                <i class="bi bi-hammer me-1"></i> {{ $progres > 0 ? 'Update (' . $progres . '%)' : 'Input Progres' }}
                                             </button>
-                                        @elseif($warga)
-                                            <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Warga">
+                                        @endif
+
+                                        @if($warga)
+                                            <a href="{{ route('warga.show', ['warga' => $warga->id_warga, 'from' => 'realisasi']) }}" class="btn btn-light-primary" title="Detail Profil Warga">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         @endif
@@ -451,7 +454,7 @@
                                 </td>
                             </tr>
 
-                            @if($isDinas)
+                            @if($canInputRealisasi)
                             <!-- ================= MODAL UPDATE PROGRES REALISASI ================= -->
                             <div class="modal fade" id="modalUpdateRealisasi{{ $bantuan->id_bantuan }}" tabindex="-1" aria-labelledby="labelUpdate{{ $bantuan->id_bantuan }}" aria-hidden="true">
                                 <div class="modal-dialog modal-dialog-centered modal-lg">

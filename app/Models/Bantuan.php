@@ -154,9 +154,9 @@ class Bantuan extends Model
         }
 
         return match ((int) $this->status_bantuan) {
-            self::STATUS_DIAJUKAN => 'bg-secondary text-white',
-            self::STATUS_DIVERIFIKASI => 'bg-info text-dark',
-            self::STATUS_DISETUJUI => 'bg-primary text-white',
+            self::STATUS_DIAJUKAN => 'bg-warning text-dark',
+            self::STATUS_DIVERIFIKASI => 'bg-primary text-white',
+            self::STATUS_DISETUJUI => 'bg-success text-white',
             self::STATUS_REVISI => 'bg-warning text-dark',
             self::STATUS_DITOLAK => 'bg-danger text-white',
             self::STATUS_DIREALISASIKAN => 'bg-success text-white',

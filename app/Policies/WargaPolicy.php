@@ -31,10 +31,12 @@ class WargaPolicy
 
     public function update(User $user, Warga $warga): bool
     {
-        if ($user->isSuperadmin()) {
+        // 1. Superadmin & Admin Dinas memiliki akses penuh untuk mengedit data warga pada semua status
+        if ($user->isSuperadmin() || $user->isAdminDinas()) {
             return true;
         }
 
+        // 2. Admin Kelurahan hanya boleh mengedit warga di wilayahnya sendiri
         if (! $user->isAdminKelurahan() || ! $this->isSameWilayah($user, $warga)) {
             return false;
         }
@@ -47,6 +49,8 @@ class WargaPolicy
             return true;
         }
 
+        // 3. Admin Kelurahan hanya boleh mengedit saat status 0 (Diajukan), 1 (Diverifikasi), atau 3 (Revisi)
+        // Data yang sudah divalidasi/disetujui dinas (2), ditolak (4), atau direalisasikan (5) terkunci untuk Kelurahan
         return in_array((int) $bantuan->status_bantuan, Bantuan::STATUS_EDITABLE_KELURAHAN, true);
     }
 

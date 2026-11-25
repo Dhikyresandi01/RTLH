@@ -61,14 +61,14 @@
     }
     .nav-pills-custom .nav-link:hover {
         background-color: #f1f3f9;
-        color: #435ebe;
-        border-color: #c7d2fe;
+        color: #002b84;
+        border-color: #99b4ea;
     }
     .nav-pills-custom .nav-link.active {
-        background-color: #435ebe !important;
+        background-color: #002b84 !important;
         color: #ffffff !important;
-        border-color: #435ebe !important;
-        box-shadow: 0 4px 12px rgba(67, 94, 190, 0.25);
+        border-color: #002b84 !important;
+        box-shadow: 0 4px 12px rgba(0, 43, 132, 0.25);
     }
     .table-terpadu thead th {
         background-color: #f8f9fa !important;

@@ -19,6 +19,53 @@
 @endpush
 
 @section('content')
+@php
+    $hunian = $warga->Hunian->first();
+    $rumah = $hunian?->Rumah->first();
+    $utilitas = $rumah?->Utilitas->first();
+    $dokumenWarga = $warga->Dokumen;
+    $dokumenRumah = $rumah?->DokumenRumah ?? collect();
+    $bantuan = $warga->bantuanAktif ?? $warga->Bantuan?->firstWhere('is_aktif', true);
+
+    // Menentukan asal rute dan navigasi Kembali dinamis
+    $navFrom = request('from');
+    $prevUrl = url()->previous();
+
+    if ($navFrom === 'spk' || str_contains($prevUrl, '/spk') || str_contains($prevUrl, '/verifikasi')) {
+        $backUrl = route('spk.index');
+        $backLabel = 'Verifikasi & SPK';
+        $navFrom = 'spk';
+    } elseif ($navFrom === 'disetujui' || str_contains($prevUrl, 'penerima-disetujui') || str_contains($prevUrl, 'disetujui')) {
+        $backUrl = route('warga.disetujui');
+        $backLabel = 'Penerima Disetujui';
+        $navFrom = 'disetujui';
+    } elseif ($navFrom === 'realisasi' || str_contains($prevUrl, 'realisasi')) {
+        $backUrl = route('realisasi.index');
+        $backLabel = 'Realisasi Bantuan';
+        $navFrom = 'realisasi';
+    } elseif ($navFrom === 'dashboard' || str_contains($prevUrl, 'dashboard')) {
+        $backUrl = route('dashboard');
+        $backLabel = 'Dashboard';
+        $navFrom = 'dashboard';
+    } elseif ($bantuan && (int)$bantuan->status_bantuan === \App\Models\Bantuan::STATUS_DIVERIFIKASI) {
+        $backUrl = route('spk.index');
+        $backLabel = 'Verifikasi & SPK';
+        $navFrom = 'spk';
+    } elseif ($bantuan && (int)$bantuan->status_bantuan === \App\Models\Bantuan::STATUS_DISETUJUI) {
+        $backUrl = route('warga.disetujui');
+        $backLabel = 'Penerima Disetujui';
+        $navFrom = 'disetujui';
+    } elseif ($bantuan && (int)$bantuan->status_bantuan === \App\Models\Bantuan::STATUS_DIREALISASIKAN) {
+        $backUrl = route('realisasi.index');
+        $backLabel = 'Realisasi Bantuan';
+        $navFrom = 'realisasi';
+    } else {
+        $backUrl = route('warga.index');
+        $backLabel = 'Daftar Usulan';
+        $navFrom = 'warga';
+    }
+@endphp
+
 <div class="page-heading">
     <!-- Breadcrumb & Navigasi -->
     <div class="page-title mb-4">
@@ -26,7 +73,7 @@
             <div class="col-12 col-md-7">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1">
-                        <li class="breadcrumb-item"><a href="{{ route('warga.index') }}">Daftar Usulan</a></li>
+                        <li class="breadcrumb-item"><a href="{{ $backUrl }}">{{ $backLabel }}</a></li>
                         <li class="breadcrumb-item active" aria-current="page">Detail Profil Terpadu</li>
                     </ol>
                 </nav>
@@ -34,11 +81,11 @@
                 <p class="text-muted small mb-0">NIK: {{ $warga->nik }} | No. KK: {{ $warga->no_kk }} | Kelurahan {{ $warga->wilayah->desa ?? '-' }}</p>
             </div>
             <div class="col-12 col-md-5 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
-                <a href="{{ route('warga.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i> Kembali
+                <a href="{{ $backUrl }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali ke {{ $backLabel }}
                 </a>
                 @can('update', $warga)
-                    <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-warning shadow-sm">
+                    <a href="{{ route('warga.edit', ['warga' => $warga->id_warga, 'from' => $navFrom]) }}" class="btn btn-warning shadow-sm">
                         <i class="bi bi-pencil me-1"></i> Edit Data
                     </a>
                 @endcan
@@ -48,15 +95,6 @@
             </div>
         </div>
     </div>
-
-    @php
-        $hunian = $warga->Hunian->first();
-        $rumah = $hunian?->Rumah->first();
-        $utilitas = $rumah?->Utilitas->first();
-        $dokumenWarga = $warga->Dokumen;
-        $dokumenRumah = $rumah?->DokumenRumah ?? collect();
-        $bantuan = $warga->bantuanAktif ?? $warga->Bantuan?->firstWhere('is_aktif', true);
-    @endphp
 
     <div class="row">
         <!-- Kolom Kiri: Profil Singkat & Status -->
@@ -164,7 +202,14 @@
                                 <span class="fw-semibold small">Foto KTP</span>
                             </div>
                             @if($dokumenWarga?->foto_ktp)
-                                <a href="{{ asset('storage/' . $dokumenWarga->foto_ktp) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2">Lihat</a>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="bukaPreviewFoto('{{ asset('storage/' . $dokumenWarga->foto_ktp) }}', 'Foto KTP - {{ addslashes($warga->nama) }}', 'KTP_{{ $warga->nik }}.jpg')" title="Lihat Foto">
+                                        <i class="bi bi-eye me-1"></i>Lihat
+                                    </button>
+                                    <a href="{{ asset('storage/' . $dokumenWarga->foto_ktp) }}" download="KTP_{{ $warga->nik }}.jpg" class="btn btn-sm btn-outline-success py-0 px-2" title="Unduh Foto Langsung">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
                             @else
                                 <span class="badge bg-light text-muted">Tidak Ada</span>
                             @endif
@@ -176,7 +221,14 @@
                                 <span class="fw-semibold small">Foto Kartu Keluarga</span>
                             </div>
                             @if($dokumenWarga?->foto_kk)
-                                <a href="{{ asset('storage/' . $dokumenWarga->foto_kk) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2">Lihat</a>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="bukaPreviewFoto('{{ asset('storage/' . $dokumenWarga->foto_kk) }}', 'Foto Kartu Keluarga - {{ addslashes($warga->nama) }}', 'KK_{{ $warga->nik }}.jpg')" title="Lihat Foto">
+                                        <i class="bi bi-eye me-1"></i>Lihat
+                                    </button>
+                                    <a href="{{ asset('storage/' . $dokumenWarga->foto_kk) }}" download="KK_{{ $warga->nik }}.jpg" class="btn btn-sm btn-outline-success py-0 px-2" title="Unduh Foto Langsung">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
                             @else
                                 <span class="badge bg-light text-muted">Tidak Ada</span>
                             @endif
@@ -188,7 +240,14 @@
                                 <span class="fw-semibold small">Bukti DTKS / DTSEN</span>
                             </div>
                             @if($dokumenWarga?->foto_dtsen)
-                                <a href="{{ asset('storage/' . $dokumenWarga->foto_dtsen) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2">Lihat</a>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="bukaPreviewFoto('{{ asset('storage/' . $dokumenWarga->foto_dtsen) }}', 'Bukti DTKS / DTSEN - {{ addslashes($warga->nama) }}', 'DTKS_{{ $warga->nik }}.jpg')" title="Lihat Foto">
+                                        <i class="bi bi-eye me-1"></i>Lihat
+                                    </button>
+                                    <a href="{{ asset('storage/' . $dokumenWarga->foto_dtsen) }}" download="DTKS_{{ $warga->nik }}.jpg" class="btn btn-sm btn-outline-success py-0 px-2" title="Unduh Foto Langsung">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
                             @else
                                 <span class="badge bg-light text-muted">Tidak Ada</span>
                             @endif
@@ -421,12 +480,20 @@
                         <div class="row g-3">
                             @foreach($dokumenRumah as $foto)
                                 <div class="col-12 col-sm-6 col-md-4">
-                                    <div class="card h-100 border shadow-none">
-                                        <a href="{{ asset('storage/' . $foto->path_foto) }}" target="_blank">
-                                            <img src="{{ asset('storage/' . $foto->path_foto) }}" alt="{{ $foto->jenis_foto }}" class="card-img-top" style="height: 160px; object-fit: cover;">
+                                    <div class="card h-100 border shadow-sm">
+                                        <a href="javascript:void(0)" onclick="bukaPreviewFoto('{{ asset('storage/' . $foto->path_foto) }}', '{{ addslashes($foto->jenis_foto) }} - {{ addslashes($warga->nama) }}', '{{ Str::slug($foto->jenis_foto) }}_{{ $warga->nik }}.jpg')" title="Klik untuk memperbesar & unduh">
+                                            <img src="{{ asset('storage/' . $foto->path_foto) }}" alt="{{ $foto->jenis_foto }}" class="card-img-top" style="height: 160px; object-fit: cover; cursor: pointer;">
                                         </a>
-                                        <div class="card-body p-2 text-center bg-light">
+                                        <div class="card-body p-2 d-flex justify-content-between align-items-center bg-light">
                                             <span class="fw-semibold small text-dark">{{ $foto->jenis_foto }}</span>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary btn-xs py-0 px-2" style="font-size: 0.75rem;" onclick="bukaPreviewFoto('{{ asset('storage/' . $foto->path_foto) }}', '{{ addslashes($foto->jenis_foto) }} - {{ addslashes($warga->nama) }}', '{{ Str::slug($foto->jenis_foto) }}_{{ $warga->nik }}.jpg')" title="Buka Preview Foto">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                <a href="{{ asset('storage/' . $foto->path_foto) }}" download="{{ Str::slug($foto->jenis_foto) }}_{{ $warga->nik }}.jpg" class="btn btn-outline-success btn-xs py-0 px-2" style="font-size: 0.75rem;" title="Unduh Foto Langsung">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

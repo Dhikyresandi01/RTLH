@@ -39,7 +39,7 @@
             width: 100%;
         }
         th {
-            background-color: #435ebe;
+            background-color: #002b84;
             color: #ffffff;
             font-weight: bold;
             border: 0.5pt solid #2c3e50;

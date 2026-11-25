@@ -41,7 +41,7 @@ class BantuanFactory extends Factory
     {
         return $this->state(fn () => [
             'status_bantuan' => Bantuan::STATUS_DIVERIFIKASI,
-            'id_verifikator_bantuan' => User::factory()->adminDinas(),
+            'id_verifikator_bantuan' => User::where('role', 'admin_dinas')->inRandomOrder()->value('id') ?? User::factory()->adminDinas(),
         ]);
     }
  
@@ -49,7 +49,7 @@ class BantuanFactory extends Factory
     {
         return $this->state(fn () => [
             'status_bantuan' => Bantuan::STATUS_DISETUJUI,
-            'id_verifikator_bantuan' => User::factory()->adminDinas(),
+            'id_verifikator_bantuan' => User::where('role', 'admin_dinas')->inRandomOrder()->value('id') ?? User::factory()->adminDinas(),
         ]);
     }
  
@@ -58,7 +58,7 @@ class BantuanFactory extends Factory
         return $this->state(fn () => [
             'status_bantuan' => Bantuan::STATUS_REVISI,
             'catatan_verifikasi' => $catatan,
-            'id_verifikator_bantuan' => User::factory()->adminDinas(),
+            'id_verifikator_bantuan' => User::where('role', 'admin_dinas')->inRandomOrder()->value('id') ?? User::factory()->adminDinas(),
         ]);
     }
 
@@ -67,7 +67,7 @@ class BantuanFactory extends Factory
         return $this->state(fn () => [
             'status_bantuan' => Bantuan::STATUS_DITOLAK,
             'catatan_verifikasi' => $catatan,
-            'id_verifikator_bantuan' => User::factory()->adminDinas(),
+            'id_verifikator_bantuan' => User::where('role', 'admin_dinas')->inRandomOrder()->value('id') ?? User::factory()->adminDinas(),
         ]);
     }
  

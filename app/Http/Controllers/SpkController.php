@@ -159,12 +159,15 @@ class SpkController extends Controller
 
         $validated = $request->validate([
             'status_bantuan' => ['required', 'in:1,2,3,4'], // 1=Diverifikasi, 2=Disetujui, 3=Revisi, 4=Ditolak
-            'catatan_verifikasi' => ['required', 'string', 'max:1000'],
+            'catatan_verifikasi' => ['nullable', 'required_if:status_bantuan,3,4', 'string', 'max:4000'],
+            'id_program' => ['nullable', 'required_if:status_bantuan,2', 'exists:program_bantuan,id_program'],
         ], [
             'status_bantuan.required' => 'Keputusan verifikasi wajib dipilih.',
             'status_bantuan.in' => 'Pilihan keputusan verifikasi tidak sah.',
-            'catatan_verifikasi.required' => 'Catatan / alasan verifikasi dinas wajib diisi.',
-            'catatan_verifikasi.max' => 'Catatan verifikasi maksimal 1000 karakter.',
+            'catatan_verifikasi.required_if' => 'Catatan / alasan verifikasi dinas wajib diisi apabila usulan ditolak atau perlu revisi.',
+            'catatan_verifikasi.max' => 'Catatan verifikasi maksimal 4000 karakter.',
+            'id_program.required_if' => 'Alokasi program bantuan wajib dipilih saat memvalidasi bantuan.',
+            'id_program.exists' => 'Program bantuan yang dipilih tidak sah.',
         ]);
 
         $bantuan = Bantuan::with('warga')->findOrFail($id_bantuan);
@@ -173,11 +176,22 @@ class SpkController extends Controller
         try {
             $newStatus = (int) $validated['status_bantuan'];
 
-            $bantuan->update([
+            $newCatatan = $request->filled('catatan_verifikasi')
+                ? $validated['catatan_verifikasi']
+                : ($newStatus === Bantuan::STATUS_DISETUJUI ? $bantuan->catatan_verifikasi : null);
+
+            $updateData = [
                 'status_bantuan' => $newStatus,
-                'catatan_verifikasi' => $validated['catatan_verifikasi'],
+                'catatan_verifikasi' => $newCatatan,
                 'id_verifikator_bantuan' => $user->id,
-            ]);
+            ];
+
+            // Update alokasi program bantuan jika dipilih oleh Dinas
+            if ($request->filled('id_program')) {
+                $updateData['id_program'] = (int) $validated['id_program'];
+            }
+
+            $bantuan->update($updateData);
 
             if (!in_array($newStatus, [Bantuan::STATUS_DIVERIFIKASI, Bantuan::STATUS_DISETUJUI], true)) {
                 SpkRanking::where('id_bantuan', $bantuan->id_bantuan)->delete();

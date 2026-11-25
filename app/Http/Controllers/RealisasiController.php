@@ -14,17 +14,6 @@ use Illuminate\Support\Facades\Storage;
 class RealisasiController extends Controller
 {
     /**
-     * Pastikan hanya Admin Dinas dan Superadmin yang dapat mengakses fitur Realisasi.
-     */
-    protected function authorizeAccess(): void
-    {
-        $user = Auth::user();
-        if (!$user || (!$user->isSuperadmin() && !$user->isAdminDinas())) {
-            abort(403, 'Akses Ditolak: Fitur Realisasi Bantuan hanya dapat diakses oleh Admin Dinas dan Super Admin.');
-        }
-    }
-
-    /**
      * Menampilkan daftar bantuan yang telah disetujui/direalisasikan beserta progres realisasinya.
      * Admin kelurahan dapat memantau wilayahnya secara view-only.
      */
@@ -137,7 +126,21 @@ class RealisasiController extends Controller
      */
     public function storeOrUpdate(Request $request, $id_bantuan)
     {
-        $this->authorizeAccess();
+        $user = Auth::user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $bantuan = Bantuan::with('warga')->findOrFail($id_bantuan);
+
+        // Otorisasi: Admin Kelurahan hanya boleh mencatat realisasi untuk warga di kelurahan wilayahnya sendiri
+        if ($user->isAdminKelurahan()) {
+            if (!$bantuan->warga || (int) $bantuan->warga->id_wilayah !== (int) $user->id_wilayah) {
+                abort(403, 'Akses Ditolak: Anda hanya memiliki wewenang mencatat realisasi fisik untuk warga di kelurahan Anda.');
+            }
+        } elseif (!$user->isSuperadmin() && !$user->isAdminDinas()) {
+            abort(403, 'Akses Ditolak: Anda tidak memiliki wewenang untuk mencatat data realisasi.');
+        }
 
         $request->validate([
             'status'        => ['required', 'in:0,25,50,100'],
@@ -217,7 +220,10 @@ class RealisasiController extends Controller
      */
     public function destroy($id_realisasi)
     {
-        $this->authorizeAccess();
+        $user = Auth::user();
+        if (!$user || (!$user->isSuperadmin() && !$user->isAdminDinas())) {
+            abort(403, 'Akses Ditolak: Hanya Admin Dinas dan Superadmin yang berwenang menghapus atau mereset data realisasi.');
+        }
 
         $realisasi = Realisasi::with('bantuan.warga')->findOrFail($id_realisasi);
 

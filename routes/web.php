@@ -3,17 +3,17 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HunianController;
+use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\ProgramBantuanController;
 use App\Http\Controllers\RealisasiController;
 use App\Http\Controllers\RumahController;
 use App\Http\Controllers\SpkController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WargaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('welcome');
+Route::get('/', [LandingPageController::class, 'index'])->name('welcome');
 
 
 Route::middleware('guest')->group(function () {
@@ -43,9 +43,22 @@ Route::middleware('auth')->group(function () {
     Route::resource('hunian', HunianController::class);
     Route::resource('rumah', RumahController::class);
 
-    // Master Data Jenis Bantuan (Khusus Superadmin)
+    // Master Data & Kelola User (Khusus Superadmin)
     Route::middleware('role:superadmin')->group(function () {
         Route::resource('program-bantuan', ProgramBantuanController::class)->except(['show', 'create', 'edit']);
+        Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
+        Route::post('users/{id}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+
+        // CMS Kelola Landing Page
+        Route::get('landing-page', [LandingPageController::class, 'manage'])->name('landing-page.manage');
+        Route::post('landing-page/hero', [LandingPageController::class, 'updateHero'])->name('landing-page.update-hero');
+        Route::post('landing-page/profil-kontak', [LandingPageController::class, 'updateProfilKontak'])->name('landing-page.update-profil-kontak');
+        Route::post('landing-page/statistik', [LandingPageController::class, 'updateStatistik'])->name('landing-page.update-statistik');
+        Route::post('landing-page/publikasi', [LandingPageController::class, 'updatePublikasi'])->name('landing-page.update-publikasi');
+        Route::post('landing-page/realisasi', [LandingPageController::class, 'updateRealisasi'])->name('landing-page.update-realisasi');
+        Route::post('landing-page/faq', [LandingPageController::class, 'storeFaq'])->name('landing-page.store-faq');
+        Route::delete('landing-page/faq/{id}', [LandingPageController::class, 'deleteFaq'])->name('landing-page.delete-faq');
+        Route::post('landing-page/reset', [LandingPageController::class, 'resetSection'])->name('landing-page.reset');
     });
 
     // View 2 (Verifikasi Dinas & SPK SAW) & View 4 (Realisasi Bantuan) — Akses Baca Semua Role (Kelurahan View-Only Wilayahnya)
@@ -55,15 +68,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/spk', [SpkController::class, 'index'])->name('spk.index');
     Route::get('/realisasi', [RealisasiController::class, 'index'])->name('realisasi.index');
 
-    // Aksi Mutasi View 2 & View 4 — Khusus Superadmin & Admin Dinas
+    // Input / Pembaruan Progres Realisasi Fisik (Dapat diinput oleh Kelurahan wilayah terkait, Admin Dinas, & Superadmin)
+    Route::post('/realisasi/{id_bantuan}', [RealisasiController::class, 'storeOrUpdate'])->name('realisasi.update');
+
+    // Aksi Mutasi View 2 & Hapus Realisasi — Khusus Superadmin & Admin Dinas
     Route::middleware('role:superadmin,admin_dinas')->group(function () {
         // SPK Simple Additive Weighting & Verifikasi Dinas
         Route::post('/spk/hitung', [SpkController::class, 'hitung'])->name('spk.hitung');
         Route::post('/spk/kriteria', [SpkController::class, 'updateKriteria'])->name('spk.kriteria.update');
         Route::post('/spk/verifikasi/{id_bantuan}', [SpkController::class, 'verifikasiDinas'])->name('spk.verifikasi');
 
-        // Realisasi & Penyaluran Bantuan
-        Route::post('/realisasi/{id_bantuan}', [RealisasiController::class, 'storeOrUpdate'])->name('realisasi.update');
+        // Reset / Hapus Data Realisasi
         Route::delete('/realisasi/{id_realisasi}', [RealisasiController::class, 'destroy'])->name('realisasi.destroy');
     });
 });

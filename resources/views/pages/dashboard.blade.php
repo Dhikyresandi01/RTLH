@@ -53,7 +53,7 @@
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            @if(Route::has('warga.create'))
+            @if(Auth::user()->isAdminKelurahan() || Auth::user()->isSuperadmin())
                 <a href="{{ route('warga.create') }}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
                     <i class="bi bi-person-plus-fill"></i>
                     <span>+ Usulan Calon Penerima</span>
@@ -68,7 +68,7 @@
     </div>
 
     <!-- User Notice Banner -->
-    <div class="card bg-primary text-white mb-4 border-0 shadow-sm overflow-hidden" style="background: linear-gradient(135deg, #435ebe 0%, #25396f 100%);">
+    <div class="card bg-primary text-white mb-4 border-0 shadow-sm overflow-hidden" style="background: linear-gradient(135deg, #1e3653 0%, #002b84 55%, #054735 100%);">
         <div class="card-body p-4 position-relative">
             <div class="row align-items-center">
                 <div class="col-lg-8 col-md-9">
@@ -93,11 +93,6 @@
                         Monitoring terpusat penetapan, verifikasi kriteria fisik rumah, dan realisasi bantuan RTLH Kota Kediri sesuai dengan 
                         <strong>Peraturan Walikota Kediri Nomor 18 Tahun 2026</strong>.
                     </p>
-                </div>
-                <div class="col-lg-4 col-md-3 text-md-end mt-3 mt-md-0 d-none d-md-block">
-                    <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-10">
-                        <i class="bi bi-building-check text-white" style="font-size: 3rem;"></i>
-                    </div>
                 </div>
             </div>
         </div>
@@ -456,7 +451,7 @@
                                                     <i class="bi bi-eye"></i> Detail
                                                 </a>
                                             @else
-                                                <a href="{{ route('warga.show', $bantuan->id_warga) }}" class="btn btn-sm btn-light-primary">
+                                                <a href="{{ route('warga.show', ['warga' => $bantuan->id_warga, 'from' => 'dashboard']) }}" class="btn btn-sm btn-light-primary">
                                                     <i class="bi bi-eye"></i> Warga
                                                 </a>
                                             @endif
@@ -635,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Titik marker seragam tanpa kode warna
                 const marker = L.circleMarker([pt.lat, pt.lng], {
                     radius: 6,
-                    fillColor: '#435ebe',
+                    fillColor: '#002b84',
                     color: '#ffffff',
                     weight: 2,
                     opacity: 1,
@@ -726,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 distributed: true
             }
         },
-        colors: ['#ffab00', '#03c3ec', '#696cff', '#71dd37', '#8592a3'],
+        colors: ['#ebb866', '#002b84', '#1e3653', '#054735', '#ffc000'],
         dataLabels: {
             enabled: true,
             style: {
@@ -802,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 fontSize: '13px'
             }
         },
-        colors: ['#435ebe', '#55c6e8', '#41be9a'],
+        colors: ['#002b84', '#1e3653', '#054735'],
         legend: {
             position: 'bottom',
             fontSize: '12px'

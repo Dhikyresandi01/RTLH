@@ -318,7 +318,7 @@
                                             @endforelse
                                         </select>
                                         @error('id_program') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        <small class="text-muted">Jenis bantuan yang akan diusulkan untuk warga ini</small>
+                                        <small class="text-muted">Opsional / rekomendasi awal. Penetapan resmi program bantuan akan ditentukan oleh Dinas pada saat validasi usulan.</small>
                                     </div>
                                 </div>
                             </div>
