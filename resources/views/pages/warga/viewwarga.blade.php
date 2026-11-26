@@ -7,125 +7,323 @@
 @section('title', 'Daftar Usulan Calon Penerima RTLH')
 
 @section('content')
+<!-- Google Fonts & Material Symbols for Stitch Modern Table Design -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&family=Wix+Madefor+Display:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
+
 <style>
-    .kpi-card {
-        border-radius: 12px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    :root {
+        --stitch-primary: #001D4E;
+        --stitch-primary-hover: #16336B;
+        --stitch-surface: #F8FAFC;
+        --stitch-border: #CBD5E1;
+        --stitch-info-bg: #DBEAFE;
+        --stitch-info-text: #1E40AF;
+        --stitch-success-bg: #DCFCE7;
+        --stitch-success-text: #166534;
+        --stitch-warning-bg: #FEF3C7;
+        --stitch-warning-text: #92400E;
+        --stitch-error-bg: #FFDAD6;
+        --stitch-error-text: #93000A;
     }
-    .kpi-card:hover {
-        transform: translateY(-2px);
+
+    .font-mono-num {
+        font-family: 'Spline Sans Mono', monospace !important;
+        font-variant-numeric: tabular-nums;
+        font-size: 11.5px;
     }
-    .kpi-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-        display: flex;
+
+    .font-headline {
+        font-family: 'Wix Madefor Display', sans-serif !important;
+    }
+
+    .font-stitch {
+        font-family: 'Instrument Sans', sans-serif !important;
+    }
+
+    .stitch-header-badge {
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-    .kpi-icon i {
-        width: auto;
-        height: auto;
-        line-height: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .kpi-icon i::before {
-        vertical-align: middle;
-        line-height: 1;
-    }
-    .nav-pills-custom .nav-link {
-        color: #495057;
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 9999px;
+        background: #FFFFFF;
+        border: 1px solid var(--stitch-border);
+        color: var(--stitch-primary);
         font-weight: 600;
-        font-size: 0.86rem;
-        padding: 0.55rem 1.1rem;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
+        font-size: 13px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .nav-pills-custom .nav-link i {
+
+    .stitch-header-badge .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #1D4ED8;
+    }
+
+    /* Stitch Nav Tabs */
+    .stitch-tablist {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 5px;
+        border-radius: 10px;
+        background: #FFFFFF;
+        border: 1px solid var(--stitch-border);
+    }
+
+    .stitch-tab-trigger {
         display: inline-flex;
         align-items: center;
+        gap: 8px;
+        padding: 7px 16px;
+        border-radius: 6px;
+        font-family: 'Instrument Sans', sans-serif;
+        font-weight: 600;
+        font-size: 13px;
+        color: #475569;
+        background: transparent;
+        border: none;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+
+    .stitch-tab-trigger:hover {
+        background: #F1F5F9;
+        color: #0F172A;
+    }
+
+    .stitch-tab-trigger.active {
+        background: var(--stitch-primary) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 2px 6px rgba(0, 29, 78, 0.25);
+    }
+
+    .stitch-tab-trigger .material-symbols-outlined {
+        font-size: 18px;
         line-height: 1;
-        font-size: 1rem;
-    }
-    .nav-pills-custom .nav-link i::before {
         vertical-align: middle;
-        line-height: 1;
     }
-    .nav-pills-custom .nav-link:hover {
-        background-color: #f1f3f9;
-        color: #002b84;
-        border-color: #99b4ea;
+
+    /* Stitch Table Card & Header */
+    .stitch-card {
+        background: #FFFFFF;
+        border: 1px solid var(--stitch-border);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
     }
-    .nav-pills-custom .nav-link.active {
-        background-color: #002b84 !important;
-        color: #ffffff !important;
-        border-color: #002b84 !important;
-        box-shadow: 0 4px 12px rgba(0, 43, 132, 0.25);
+
+    .stitch-toolbar {
+        padding: 12px 18px;
+        background: #FFFFFF;
+        border-bottom: 1px solid var(--stitch-border);
     }
-    .table-terpadu thead th {
-        background-color: #f8f9fa !important;
-        color: #495057;
+
+    .stitch-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Instrument Sans', sans-serif;
+    }
+
+    .stitch-table thead th {
+        background: #F8FAFC !important;
+        border-bottom: 1px solid var(--stitch-border) !important;
+        color: #475569;
+        font-size: 11px;
         font-weight: 700;
-        font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        padding: 0.85rem 1rem !important;
-        border-bottom: 2px solid #e9ecef !important;
+        padding: 11px 14px !important;
         white-space: nowrap;
     }
-    .table-terpadu tbody td {
-        padding: 0.95rem 1rem !important;
+
+    .stitch-table tbody tr {
+        transition: background-color 0.12s ease;
+        border-bottom: 1px solid #E2E8F0;
+    }
+
+    .stitch-table tbody tr:hover {
+        background-color: #F8FAFC !important;
+    }
+
+    .stitch-table tbody td {
+        padding: 12px 14px !important;
+        vertical-align: top;
+        font-size: 13px;
+    }
+
+    /* Micro indicators for structure */
+    .micro-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.3;
+        width: fit-content;
+    }
+
+    .micro-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .micro-pill-danger {
+        background-color: var(--stitch-error-bg);
+        color: var(--stitch-error-text);
+    }
+    .micro-pill-danger .dot { background-color: #BA1A1A; }
+
+    .micro-pill-success {
+        background-color: var(--stitch-success-bg);
+        color: var(--stitch-success-text);
+    }
+    .micro-pill-success .dot { background-color: #15803D; }
+
+    .micro-pill-warning {
+        background-color: var(--stitch-warning-bg);
+        color: var(--stitch-warning-text);
+    }
+    .micro-pill-warning .dot { background-color: #B45309; }
+
+    /* Action icon buttons */
+    .stitch-btn-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--stitch-border);
+        background: #F8FAFC;
+        color: #475569;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+
+    .stitch-btn-icon:hover {
+        background: #EFF6FF;
+        color: #1D4ED8;
+        border-color: #93C5FD;
+    }
+
+    .stitch-btn-verify {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: var(--stitch-primary);
+        color: #FFFFFF !important;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        transition: background-color 0.15s ease;
+        text-decoration: none;
+    }
+
+    .stitch-btn-verify:hover {
+        background: var(--stitch-primary-hover);
+    }
+
+    .stitch-btn-edit {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--stitch-warning-bg);
+        color: var(--stitch-warning-text) !important;
+        border: 1px solid #FDE68A;
+        transition: all 0.15s ease;
+        text-decoration: none;
+    }
+
+    .stitch-btn-edit:hover {
+        background: #F59E0B;
+        color: #FFFFFF !important;
+    }
+
+    .stitch-btn-delete {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--stitch-error-bg);
+        color: var(--stitch-error-text) !important;
+        border: 1px solid #FECACA;
+        transition: all 0.15s ease;
+    }
+
+    .stitch-btn-delete:hover {
+        background: #DC2626;
+        color: #FFFFFF !important;
+    }
+
+    .material-symbols-outlined {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        line-height: 1 !important;
         vertical-align: middle;
-        font-size: 0.88rem;
     }
 </style>
 
-<div class="page-heading">
-    <!-- Header Halaman -->
-    <div class="page-title mb-4">
-        <div class="row align-items-center">
-            <div class="col-12 col-xl-7">
-                <h3 class="fw-bold mb-1 text-primary">
-                    <i class="bi bi-people-fill me-2"></i>Daftar Usulan Calon Penerima RTLH
-                </h3>
+<div class="page-heading font-stitch mb-4">
+    <!-- Header Halaman Versi Stitch -->
+    <div class="d-flex flex-column flex-md-row align-items-md-start justify-content-between gap-3 mb-4">
+        <div class="max-w-3xl">
+            <h1 class="font-headline fw-bold mb-1 text-dark" style="font-size: 24px; letter-spacing: -0.25px;">
+                Daftar Usulan Calon Penerima RTLH
+            </h1>
+            <p class="text-muted mb-0" style="font-size: 13px; line-height: 1.5;">
                 @if($isDinas)
-                    <p class="text-muted mb-0">
-                        Monitoring usulan pra-verifikasi lintas kelurahan (status <em>Menunggu Verifikasi</em>, <em>Perlu Revisi</em>, dan <em>Ditolak</em>). Gunakan tombol <strong>Verifikasi</strong> untuk meloloskan usulan ke antrean SPK SAW.
-                    </p>
+                    Menampilkan usulan berstatus <code>Menunggu Verifikasi</code>, <code>Perlu Revisi</code>, dan <code>Ditolak</code> dari seluruh kelurahan. Usulan yang lolos verifikasi lapangan berpindah ke menu <a href="{{ route('spk.index') }}" class="fw-semibold text-decoration-none">Verifikasi Dinas &amp; SPK SAW</a>.
                 @else
-                    <p class="text-muted mb-0">
-                        Pusat data usulan terpadu kependudukan warga, kepemilikan hunian, dan survei fisik bangunan wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.
-                    </p>
+                    Pusat data usulan terpadu kependudukan warga, kepemilikan hunian, dan survei fisik bangunan wilayah <strong>{{ Auth::user()->wilayah->desa ?? 'Kelurahan' }}</strong>.
                 @endif
-            </div>
-            <div class="col-12 col-xl-5 text-xl-end mt-3 mt-xl-0 d-flex flex-wrap justify-content-xl-end gap-2">
-                <!-- Tombol Ekspor Excel Terpadu -->
-                <a href="{{ route('warga.export', request()->query()) }}" class="btn btn-success shadow-sm px-3 py-2 fw-semibold" title="Unduh Data Calon Penerima Format Excel (.xls)">
-                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Ekspor Excel
-                </a>
+            </p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 shrink-0">
+            <!-- Numeric Badge -->
+            <span class="stitch-header-badge">
+                <span class="dot"></span>
+                <span>Total: {{ $wargas->total() }} Data</span>
+            </span>
 
-                @can('create', \App\Models\Warga::class)
-                    <a href="{{ route('warga.create') }}" class="btn btn-primary shadow-sm px-3 py-2 fw-semibold">
-                        <i class="bi bi-person-plus-fill me-1"></i> Tambah Data Terpadu
-                    </a>
-                @endcan
-            </div>
+            <!-- Tombol Ekspor Excel -->
+            <a href="{{ route('warga.export', request()->query()) }}" class="btn btn-sm btn-outline-success px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" title="Unduh Data Calon Penerima Format Excel (.xls)">
+                <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
+                <span>Ekspor Excel</span>
+            </a>
+
+            @can('create', \App\Models\Warga::class)
+                <a href="{{ route('warga.create') }}" class="btn btn-sm btn-primary px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">person_add</span>
+                    <span>Tambah Data</span>
+                </a>
+            @endcan
         </div>
     </div>
 
-    <!-- Alert Notifikasi Flash -->
+    <!-- Alert Flash -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible show fade shadow-sm mb-4">
+        <div class="alert alert-success alert-dismissible show fade shadow-sm mb-3">
             <div class="d-flex align-items-center">
-                <i class="bi bi-check-circle-fill fs-4 me-2 text-success"></i>
+                <span class="material-symbols-outlined me-2 fs-5">check_circle</span>
                 <div>{{ session('success') }}</div>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -133,451 +331,287 @@
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible show fade shadow-sm mb-4">
+        <div class="alert alert-danger alert-dismissible show fade shadow-sm mb-3">
             <div class="d-flex align-items-center">
-                <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-danger"></i>
+                <span class="material-symbols-outlined me-2 fs-5">warning</span>
                 <div>{{ session('error') }}</div>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
-    @if($errors->any())
-        <div class="alert alert-danger alert-dismissible show fade shadow-sm mb-4">
-            <div class="d-flex align-items-start">
-                <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-danger"></i>
-                <div>
-                    <strong>Validasi gagal:</strong>
-                    <ul class="mb-0 mt-1 ps-3">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    <!-- Kartu Statistik KPI Ringkasan -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 border-start border-primary border-4 h-100 kpi-card">
-                <div class="card-body p-3 d-flex align-items-center">
-                    <div class="kpi-icon bg-light-primary text-primary me-3">
-                        <i class="bi bi-people-fill fs-4"></i>
-                    </div>
-                    <div>
-                        <div class="text-muted small fw-semibold">
-                            {{ $isDinas ? 'Total Usulan Masuk' : 'Usulan di Kelurahan' }}
-                        </div>
-                        <h4 class="fw-bold mb-0 text-dark">{{ $wargas->total() }}</h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if($isDinas)
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card shadow-sm border-0 border-start border-info border-4 h-100 kpi-card">
-                    <div class="card-body p-3 d-flex align-items-center">
-                        <div class="kpi-icon bg-light-info text-info me-3">
-                            <i class="bi bi-hourglass-split fs-4"></i>
-                        </div>
-                        <div>
-                            <div class="text-muted small fw-semibold">Menunggu Verifikasi</div>
-                            <h4 class="fw-bold mb-0 text-dark">
-                                {{ $wargas->filter(fn($w) => $w->bantuanAktif !== null && (int) $w->bantuanAktif->status_bantuan === \App\Models\Bantuan::STATUS_DIAJUKAN)->count() }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @else
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card shadow-sm border-0 border-start border-success border-4 h-100 kpi-card">
-                    <div class="card-body p-3 d-flex align-items-center">
-                        <div class="kpi-icon bg-light-success text-success me-3">
-                            <i class="bi bi-house-door-fill fs-4"></i>
-                        </div>
-                        <div>
-                            <div class="text-muted small fw-semibold">Rumah Milik Sendiri</div>
-                            <h4 class="fw-bold mb-0 text-dark">
-                                {{ $wargas->filter(fn($w) => $w->Hunian->first()?->status_rumah == 1)->count() }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card shadow-sm border-0 border-start border-danger border-4 h-100 kpi-card">
-                <div class="card-body p-3 d-flex align-items-center">
-                    <div class="kpi-icon bg-light-danger text-danger me-3">
-                        <i class="bi bi-exclamation-octagon-fill fs-4"></i>
-                    </div>
-                    <div>
-                        <div class="text-muted small fw-semibold">Kondisi Rusak Berat</div>
-                        <h4 class="fw-bold mb-0 text-dark">
-                            {{ $wargas->filter(fn($w) => $w->Hunian->first()?->Rumah->first()?->kondisi_atap == 3 || $w->Hunian->first()?->Rumah->first()?->kondisi_dinding == 3 || $w->Hunian->first()?->Rumah->first()?->kondisi_lantai == 3)->count() }}
-                        </h4>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            @if($isDinas)
-                <div class="card shadow-sm border-0 border-start border-warning border-4 h-100 kpi-card">
-                    <div class="card-body p-3 d-flex align-items-center">
-                        <div class="kpi-icon bg-light-warning text-warning me-3">
-                            <i class="bi bi-arrow-repeat fs-4"></i>
-                        </div>
-                        <div>
-                            <div class="text-muted small fw-semibold">Perlu Revisi</div>
-                            <h4 class="fw-bold mb-0 text-dark">
-                                {{ $wargas->filter(fn($w) => $w->bantuanAktif !== null && (int) $w->bantuanAktif->status_bantuan === \App\Models\Bantuan::STATUS_REVISI)->count() }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            @else
-                <div class="card shadow-sm border-0 border-start border-info border-4 h-100 kpi-card">
-                    <div class="card-body p-3 d-flex align-items-center">
-                        <div class="kpi-icon bg-light-info text-info me-3">
-                            <i class="bi bi-shield-check fs-4"></i>
-                        </div>
-                        <div>
-                            <div class="text-muted small fw-semibold">Profil Terverifikasi</div>
-                            <h4 class="fw-bold mb-0 text-dark">
-                                {{ $wargas->filter(fn($w) => $w->status_update == 1)->count() }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            @endif
+    <!-- Tabs Navigasi dengan Ikon (Stitch Tabs Component) -->
+    <div class="mb-3">
+        <div class="stitch-tablist" role="tablist">
+            <button class="stitch-tab-trigger active" id="tab-master" data-bs-toggle="pill" data-bs-target="#content-master" type="button" role="tab">
+                <span class="material-symbols-outlined">grid_view</span>
+                <span>1. Ringkasan Usulan</span>
+            </button>
+            <button class="stitch-tab-trigger" id="tab-hunian" data-bs-toggle="pill" data-bs-target="#content-hunian" type="button" role="tab">
+                <span class="material-symbols-outlined">location_on</span>
+                <span>2. Kepemilikan Hunian &amp; Lahan</span>
+            </button>
+            <button class="stitch-tab-trigger" id="tab-fisik" data-bs-toggle="pill" data-bs-target="#content-fisik" type="button" role="tab">
+                <span class="material-symbols-outlined">construction</span>
+                <span>3. Survei Konstruksi &amp; Sanitasi</span>
+            </button>
         </div>
     </div>
 
-    <!-- Filter & Pencarian Terpadu -->
-    <div class="card mb-4 shadow-sm border-0">
-        <div class="card-body p-3">
-            <form method="GET" action="{{ route('warga.index') }}">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-3">
-                        <label class="form-label small fw-semibold text-muted mb-1">Cari NIK / Nama / No. KK</label>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" name="search" class="form-control border-start-0" placeholder="Ketik pencarian..." value="{{ request('search') }}">
-                        </div>
-                    </div>
+    <!-- Kontainer Kartu Tabel Utama -->
+    <div class="stitch-card">
+        <!-- Table Toolbar: Search & Filters -->
+        <div class="stitch-toolbar">
+            <form method="GET" action="{{ route('warga.index') }}" class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <!-- Search Input -->
+                <div class="position-relative" style="min-width: 260px; max-width: 380px; flex: 1;">
+                    <span class="material-symbols-outlined position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size: 18px; pointer-events: none;">search</span>
+                    <input type="search" name="search" value="{{ request('search') }}" placeholder="Cari nama warga, NIK, atau kelurahan..." class="form-control form-control-sm ps-5 bg-light border-secondary-subtle font-stitch" style="font-size: 13px;">
+                </div>
 
+                <!-- Dropdown Filters -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <!-- Status Filter -->
+                    <select name="status_bantuan" class="form-select form-select-sm font-stitch" style="width: auto; font-size: 12.5px;" onchange="this.form.submit()">
+                        <option value="">Semua Status</option>
+                        <option value="{{ \App\Models\Bantuan::STATUS_DIAJUKAN }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DIAJUKAN ? 'selected' : '' }}>Menunggu Verifikasi</option>
+                        <option value="{{ \App\Models\Bantuan::STATUS_REVISI }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_REVISI ? 'selected' : '' }}>Perlu Revisi</option>
+                        <option value="{{ \App\Models\Bantuan::STATUS_DITOLAK }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DITOLAK ? 'selected' : '' }}>Ditolak</option>
+                    </select>
+
+                    <!-- Kelurahan Filter (Khusus Dinas) -->
                     @if($isDinas)
-                        <div class="col-12 col-md-3">
-                            <label class="form-label small fw-semibold text-muted mb-1">Filter Kelurahan</label>
-                            <select name="id_wilayah" class="form-select form-select-sm">
-                                <option value="">Semua Kelurahan</option>
-                                @foreach($wilayahs as $wilayah)
-                                    <option value="{{ $wilayah->id_wilayah }}" {{ request('id_wilayah') == $wilayah->id_wilayah ? 'selected' : '' }}>
-                                        {{ $wilayah->desa }} (Kec. {{ $wilayah->kecamatan }})
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endif
-
-                    <div class="col-12 col-md-2">
-                        <label class="form-label small fw-semibold text-muted mb-1">Status Usulan</label>
-                        <select name="status_bantuan" class="form-select form-select-sm">
-                            <option value="">Semua Status View 1</option>
-                            <option value="{{ \App\Models\Bantuan::STATUS_DIAJUKAN }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DIAJUKAN ? 'selected' : '' }}>Menunggu Verifikasi</option>
-                            <option value="{{ \App\Models\Bantuan::STATUS_REVISI }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_REVISI ? 'selected' : '' }}>Perlu Revisi</option>
-                            <option value="{{ \App\Models\Bantuan::STATUS_DITOLAK }}" {{ request('status_bantuan') === (string) \App\Models\Bantuan::STATUS_DITOLAK ? 'selected' : '' }}>Ditolak</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-md-{{ $isDinas ? '3' : '2' }}">
-                        <label class="form-label small fw-semibold text-muted mb-1">Jenis Bantuan</label>
-                        <select name="id_program" class="form-select form-select-sm">
-                            <option value="">Semua Jenis</option>
-                            @foreach($programs as $prog)
-                                <option value="{{ $prog->id_program }}" {{ request('id_program') == $prog->id_program ? 'selected' : '' }}>
-                                    {{ $prog->nama_program }}
+                        <select name="id_wilayah" class="form-select form-select-sm font-stitch" style="width: auto; font-size: 12.5px;" onchange="this.form.submit()">
+                            <option value="">Semua Kelurahan</option>
+                            @foreach($wilayahs as $wilayah)
+                                <option value="{{ $wilayah->id_wilayah }}" {{ request('id_wilayah') == $wilayah->id_wilayah ? 'selected' : '' }}>
+                                    Kel. {{ $wilayah->desa }}
                                 </option>
                             @endforeach
                         </select>
-                    </div>
-
-                    @if(!$isDinas)
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small fw-semibold text-muted mb-1">Status Kepemilikan</label>
-                            <select name="status_rumah" class="form-select form-select-sm">
-                                <option value="">Semua Status</option>
-                                <option value="1" {{ request('status_rumah') == '1' ? 'selected' : '' }}>Milik Sendiri</option>
-                                <option value="2" {{ request('status_rumah') == '2' ? 'selected' : '' }}>Sewa / Kontrak</option>
-                                <option value="3" {{ request('status_rumah') == '3' ? 'selected' : '' }}>Menumpang</option>
-                            </select>
-                        </div>
-
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small fw-semibold text-muted mb-1">Kondisi Atap</label>
-                            <select name="kondisi_atap" class="form-select form-select-sm">
-                                <option value="">Semua Kondisi</option>
-                                <option value="3" {{ request('kondisi_atap') == '3' ? 'selected' : '' }}>Rusak Berat</option>
-                                <option value="2" {{ request('kondisi_atap') == '2' ? 'selected' : '' }}>Rusak Sedang</option>
-                                <option value="1" {{ request('kondisi_atap') == '1' ? 'selected' : '' }}>Baik</option>
-                            </select>
-                        </div>
                     @endif
 
-                    <div class="col-12 col-md-1 d-flex gap-2">
-                        <button type="submit" class="btn btn-sm btn-primary w-100" title="Terapkan Filter">
-                            <i class="bi bi-funnel"></i>
-                        </button>
-                        @if(request()->hasAny(['search', 'id_wilayah', 'status_bantuan', 'id_program', 'status_rumah', 'kondisi_atap']))
-                            <a href="{{ route('warga.index') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </a>
-                        @endif
-                    </div>
+                    <!-- Jenis Bantuan Filter -->
+                    <select name="id_program" class="form-select form-select-sm font-stitch" style="width: auto; font-size: 12.5px;" onchange="this.form.submit()">
+                        <option value="">Semua Jenis Bantuan</option>
+                        @foreach($programs as $prog)
+                            <option value="{{ $prog->id_program }}" {{ request('id_program') == $prog->id_program ? 'selected' : '' }}>
+                                {{ $prog->nama_program }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12.5px;">
+                        <span class="material-symbols-outlined" style="font-size: 15px;">filter_list</span>
+                        <span>Filter</span>
+                    </button>
+
+                    @if(request()->hasAny(['search', 'id_wilayah', 'status_bantuan', 'id_program']))
+                        <a href="{{ route('warga.index') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filter">
+                            <span class="material-symbols-outlined" style="font-size: 15px;">restart_alt</span>
+                        </a>
+                    @endif
                 </div>
             </form>
         </div>
-    </div>
 
-    <!-- Card Utama -->
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center">
-            <div>
-                <h5 class="card-title fw-bold text-dark mb-0">
-                    Daftar Usulan Calon Penerima RTLH
-                </h5>
-                <small class="text-muted">
-                    @if($isDinas)
-                        Menampilkan usulan berstatus <code>Menunggu Verifikasi</code>, <code>Perlu Revisi</code>, dan <code>Ditolak</code> dari seluruh kelurahan. Usulan yang lolos verifikasi lapangan berpindah ke menu <a href="{{ route('spk.index') }}" class="fw-semibold text-decoration-none">Verifikasi Dinas &amp; SPK SAW</a>.
-                    @else
-                        Menampilkan usulan di wilayah Kelurahan {{ Auth::user()->wilayah->desa ?? '' }} sebelum lolos verifikasi lapangan (<code>Menunggu Verifikasi</code>, <code>Perlu Revisi</code>, <code>Ditolak</code>).
-                    @endif
-                </small>
-            </div>
-            <span class="badge bg-light-primary text-primary px-3 py-2 rounded-pill fw-bold">
-                Total: {{ $wargas->total() }} Data
-            </span>
-        </div>
+        <!-- Konten 3 Tab Tabel -->
+        <div class="tab-content" id="tableTabsContent">
 
-        <!-- Toolbar Tab Navigasi Pills (3 Tab View 1) -->
-        <div class="bg-light px-3 py-2 border-bottom">
-            <ul class="nav nav-pills nav-pills-custom gap-2 mb-0" id="tableTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="tab-master" data-bs-toggle="pill" data-bs-target="#content-master" type="button" role="tab">
-                        <i class="bi bi-grid-fill me-1"></i> 1. Ringkasan Usulan
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-hunian" data-bs-toggle="pill" data-bs-target="#content-hunian" type="button" role="tab">
-                        <i class="bi bi-geo-alt-fill me-1"></i> 2. Kepemilikan Hunian &amp; Lahan
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="tab-fisik" data-bs-toggle="pill" data-bs-target="#content-fisik" type="button" role="tab">
-                        <i class="bi bi-bricks me-1"></i> 3. Survei Konstruksi &amp; Sanitasi
-                    </button>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Isi Tabel Sesuai Tab Terpilih -->
-        <div class="card-body p-0">
-            <div class="tab-content" id="tableTabsContent">
-
-                <!-- ================= TAB 1: RINGKASAN USULAN (VIEW 1) ================= -->
-                <div class="tab-pane fade show active" id="content-master" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0 align-middle table-terpadu">
-                            <thead>
+            <!-- ================= TAB 1: RINGKASAN USULAN ================= -->
+            <div class="tab-pane fade show active" id="content-master" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="stitch-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3" style="width: 48px;">No</th>
+                                <th>Calon Penerima</th>
+                                <th>Wilayah</th>
+                                <th>Hunian</th>
+                                <th>Kondisi</th>
+                                <th>Bantuan</th>
+                                <th>Status</th>
+                                <th class="text-end pe-3" style="width: 170px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($wargas as $index => $warga)
+                                @php
+                                    $hunian = $warga->Hunian->first();
+                                    $rumah = $hunian?->Rumah->first();
+                                    $bantuan = $warga->bantuanAktif;
+                                @endphp
                                 <tr>
-                                    <th class="ps-4" style="width: 50px;">No</th>
-                                    <th>Calon Penerima (Warga)</th>
-                                    <th>Wilayah &amp; Alamat</th>
-                                    <th>Kepemilikan Hunian</th>
-                                    <th>Kondisi Konstruksi RTLH</th>
-                                    <th>Jenis Bantuan</th>
-                                    <th>Status Usulan</th>
-                                    <th class="text-end pe-4" style="width: 190px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($wargas as $index => $warga)
-                                    @php
-                                        $hunian = $warga->Hunian->first();
-                                        $rumah = $hunian?->Rumah->first();
-                                        $bantuan = $warga->bantuanAktif;
-                                    @endphp
-                                    <tr>
-                                        <td class="ps-4 fw-semibold text-muted">
-                                            {{ $wargas->firstItem() + $index }}
-                                        </td>
-
-                                        <td>
-                                            <a href="{{ route('warga.show', $warga->id_warga) }}" class="fw-bold text-dark text-decoration-none">
+                                    <td class="ps-3 font-mono-num text-muted">
+                                        {{ $wargas->firstItem() + $index }}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            <a href="{{ route('warga.show', $warga->id_warga) }}" class="fw-bold text-dark text-decoration-none" style="font-size: 13.5px;">
                                                 {{ $warga->nama }}
                                             </a>
-                                            <small class="text-muted d-block">NIK: {{ $warga->nik }}</small>
-                                            <small class="text-muted">KK: {{ $warga->no_kk }}</small>
-                                        </td>
-                                        <td>
-                                            <div class="text-dark fw-semibold">{{ $warga->wilayah->desa ?? '-' }}</div>
-                                            <small class="text-muted d-block">
-                                                {{ $warga->alamat ?? 'Alamat belum diisi' }} (RT {{ $warga->rt ?? '-' }} / RW {{ $warga->rw ?? '-' }})
-                                            </small>
-                                            <small class="text-secondary">Kec. {{ $warga->wilayah->kecamatan ?? 'Kediri' }}</small>
-                                        </td>
-                                        <td>
+                                            <span class="font-mono-num text-muted">NIK: {{ $warga->nik }}</span>
+                                            <span class="font-mono-num text-muted">KK: {{ $warga->no_kk }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-0.5" style="max-width: 220px;">
+                                            <span class="fw-bold text-dark" style="font-size: 13px;">{{ $warga->wilayah->desa ?? '-' }}</span>
+                                            <span class="text-muted" style="font-size: 12px; line-height: 1.3;">{{ $warga->alamat ?? 'Alamat belum diisi' }} (RT {{ $warga->rt ?? '-' }}/RW {{ $warga->rw ?? '-' }})</span>
+                                            <span class="text-muted" style="font-size: 11.5px;">Kec. {{ $warga->wilayah->kecamatan ?? 'Kediri' }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column align-items-start gap-1">
                                             @if($hunian)
-                                                <div>
-                                                    @if($hunian->status_rumah == 1)
-                                                        <span class="badge bg-light-success text-success fw-semibold">Milik Sendiri</span>
-                                                    @elseif($hunian->status_rumah == 2)
-                                                        <span class="badge bg-light-warning text-dark fw-semibold">Sewa / Kontrak</span>
-                                                    @elseif($hunian->status_rumah == 3)
-                                                        <span class="badge bg-light-secondary text-dark fw-semibold">Menumpang</span>
-                                                    @else
-                                                        <span class="badge bg-light text-muted">Belum disurvei</span>
-                                                    @endif
-                                                </div>
-                                                <small class="text-muted d-block mt-1">
-                                                    Luas: {{ $hunian->luas_rumah ?? '-' }} m&sup2; | {{ $hunian->jml_penghuni ?? 1 }} Jiwa
-                                                </small>
+                                                @if($hunian->status_rumah == 1)
+                                                    <span class="badge" style="background: var(--stitch-success-bg); color: var(--stitch-success-text); font-size: 11px; font-weight: 600;">Milik Sendiri</span>
+                                                @elseif($hunian->status_rumah == 2)
+                                                    <span class="badge" style="background: var(--stitch-warning-bg); color: var(--stitch-warning-text); font-size: 11px; font-weight: 600;">Sewa / Kontrak</span>
+                                                @elseif($hunian->status_rumah == 3)
+                                                    <span class="badge" style="background: #E2E8F0; color: #334155; font-size: 11px; font-weight: 600;">Menumpang</span>
+                                                @else
+                                                    <span class="badge bg-light text-muted">Belum disurvei</span>
+                                                @endif
+                                                <span class="text-muted font-mono-num">{{ $hunian->luas_rumah ?? '-' }} m² · {{ $hunian->jml_penghuni ?? 1 }} Jiwa</span>
                                             @else
-                                                <span class="badge bg-light text-muted">Data Hunian Kosong</span>
+                                                <span class="badge bg-light text-muted">Data Kosong</span>
                                             @endif
-                                        </td>
-                                        <td>
-                                            @if($rumah)
-                                                <div class="d-flex flex-wrap gap-1">
-                                                    @if($rumah->kondisi_atap == 3)
-                                                        <span class="badge bg-danger">Atap: Rusak</span>
-                                                    @elseif($rumah->kondisi_atap == 2)
-                                                        <span class="badge bg-warning text-dark">Atap: Sedang</span>
-                                                    @elseif($rumah->kondisi_atap == 1)
-                                                        <span class="badge bg-success">Atap: Baik</span>
-                                                    @endif
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if($rumah)
+                                            <div class="d-flex flex-column gap-1">
+                                                <!-- Atap -->
+                                                @if($rumah->kondisi_atap == 3)
+                                                    <span class="micro-pill micro-pill-danger"><span class="dot"></span>Atap: Rusak</span>
+                                                @elseif($rumah->kondisi_atap == 2)
+                                                    <span class="micro-pill micro-pill-warning"><span class="dot"></span>Atap: Sedang</span>
+                                                @elseif($rumah->kondisi_atap == 1)
+                                                    <span class="micro-pill micro-pill-success"><span class="dot"></span>Atap: Baik</span>
+                                                @endif
 
-                                                    @if($rumah->kondisi_dinding == 3)
-                                                        <span class="badge bg-danger">Dinding: Rusak</span>
-                                                    @elseif($rumah->kondisi_dinding == 2)
-                                                        <span class="badge bg-warning text-dark">Dinding: Sedang</span>
-                                                    @elseif($rumah->kondisi_dinding == 1)
-                                                        <span class="badge bg-success">Dinding: Baik</span>
-                                                    @endif
+                                                <!-- Dinding -->
+                                                @if($rumah->kondisi_dinding == 3)
+                                                    <span class="micro-pill micro-pill-danger"><span class="dot"></span>Dinding: Rusak</span>
+                                                @elseif($rumah->kondisi_dinding == 2)
+                                                    <span class="micro-pill micro-pill-warning"><span class="dot"></span>Dinding: Sedang</span>
+                                                @elseif($rumah->kondisi_dinding == 1)
+                                                    <span class="micro-pill micro-pill-success"><span class="dot"></span>Dinding: Baik</span>
+                                                @endif
 
-                                                    @if($rumah->kondisi_lantai == 3)
-                                                        <span class="badge bg-danger">Lantai: Rusak</span>
-                                                    @elseif($rumah->kondisi_lantai == 2)
-                                                        <span class="badge bg-warning text-dark">Lantai: Sedang</span>
-                                                    @elseif($rumah->kondisi_lantai == 1)
-                                                        <span class="badge bg-success">Lantai: Baik</span>
-                                                    @endif
-                                                </div>
-                                            @else
-                                                <span class="badge bg-light text-muted">Belum Disurvei</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($bantuan && $bantuan->program)
-                                                <span class="badge bg-light-primary text-primary fw-semibold px-2 py-1 border border-primary-subtle">
-                                                    <i class="bi bi-gift-fill me-1"></i>{{ $bantuan->program->nama_program }}
+                                                <!-- Lantai -->
+                                                @if($rumah->kondisi_lantai == 3)
+                                                    <span class="micro-pill micro-pill-danger"><span class="dot"></span>Lantai: Rusak</span>
+                                                @elseif($rumah->kondisi_lantai == 2)
+                                                    <span class="micro-pill micro-pill-warning"><span class="dot"></span>Lantai: Sedang</span>
+                                                @elseif($rumah->kondisi_lantai == 1)
+                                                    <span class="micro-pill micro-pill-success"><span class="dot"></span>Lantai: Baik</span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="badge bg-light text-muted">Belum Disurvei</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($bantuan && $bantuan->program)
+                                            <div class="d-flex flex-column align-items-start gap-1">
+                                                <span class="badge rounded-pill" style="background: var(--stitch-info-bg); color: var(--stitch-info-text); font-size: 11.5px; font-weight: 600;">
+                                                    <span class="material-symbols-outlined me-1" style="font-size: 13px; vertical-align: middle;">card_giftcard</span>{{ $bantuan->program->nama_program }}
                                                 </span>
                                                 @if($bantuan->program->jenis_bantuan)
-                                                    <small class="text-muted d-block mt-1 text-capitalize" style="font-size: 0.72rem;">
-                                                        <i class="bi bi-tag me-1"></i>{{ str_replace('_', ' ', $bantuan->program->jenis_bantuan) }}
-                                                    </small>
+                                                    <span class="text-muted text-capitalize" style="font-size: 11px;">
+                                                        {{ str_replace('_', ' ', $bantuan->program->jenis_bantuan) }}
+                                                    </span>
                                                 @endif
-                                            @else
-                                                <span class="badge bg-light text-muted">Belum Ditentukan</span>
+                                            </div>
+                                        @else
+                                            <span class="badge bg-light text-muted">Belum Ditentukan</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @include('pages.warga.partials._status_badge', [
+                                            'bantuan' => $bantuan,
+                                            'showVerifikator' => true,
+                                            'showCatatan' => true,
+                                        ])
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                            <!-- Detail -->
+                                            <a href="{{ route('warga.show', $warga->id_warga) }}" class="stitch-btn-icon" title="Lihat Detail {{ $warga->nama }}">
+                                                <span class="material-symbols-outlined" style="font-size: 17px;">visibility</span>
+                                            </a>
+
+                                            <!-- Verifikasi Lapangan (Dinas) -->
+                                            @if($isDinas && $bantuan && in_array((int)$bantuan->status_bantuan, [\App\Models\Bantuan::STATUS_DIAJUKAN, \App\Models\Bantuan::STATUS_REVISI]))
+                                                <button type="button" class="stitch-btn-verify" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Verifikasi Lapangan">
+                                                    <span class="material-symbols-outlined" style="font-size: 15px;">fact_check</span>
+                                                    <span>Verifikasi</span>
+                                                </button>
                                             @endif
-                                        </td>
-                                        <td>
-                                            @include('pages.warga.partials._status_badge', [
-                                                'bantuan' => $bantuan,
-                                                'showVerifikator' => true,
-                                                'showCatatan' => true,
-                                            ])
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ route('warga.show', $warga->id_warga) }}" class="btn btn-light-primary" title="Detail Lengkap">
-                                                    <i class="bi bi-eye"></i>
+
+                                            <!-- Edit -->
+                                            @can('update', $warga)
+                                                <a href="{{ route('warga.edit', $warga->id_warga) }}" class="stitch-btn-edit" title="Edit Data {{ $warga->nama }}">
+                                                    <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
                                                 </a>
+                                            @endcan
 
-                                                @if($isDinas && $bantuan)
-                                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVerifikasiWarga{{ $bantuan->id_bantuan }}" title="Verifikasi Lapangan">
-                                                        <i class="bi bi-clipboard-check me-1"></i>Verifikasi
+                                            <!-- Hapus -->
+                                            @can('delete', $warga)
+                                                <form action="{{ route('warga.destroy', $warga->id_warga) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus seluruh data terpadu warga ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="stitch-btn-delete" title="Hapus Data">
+                                                        <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
                                                     </button>
-                                                @endif
-
-                                                @can('update', $warga)
-                                                    <a href="{{ route('warga.edit', $warga->id_warga) }}" class="btn btn-light-warning" title="Edit Data">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </a>
-                                                @endcan
-
-                                                @can('delete', $warga)
-                                                    <form action="{{ route('warga.destroy', $warga->id_warga) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus seluruh data terpadu warga ini?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-light-danger" title="Hapus Data">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                @endcan
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="8" class="text-center py-5">
-                                            <div class="py-3">
-                                                <div class="avatar bg-light-primary text-primary mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle" style="width: 54px; height: 54px;">
-                                                    <i class="bi bi-people fs-2"></i>
-                                                </div>
-                                                <h6 class="fw-bold text-dark mb-1">Belum ada data usulan di daftar antrean awal</h6>
-                                                <p class="text-muted small mb-3">Belum ada usulan berstatus Menunggu Verifikasi, Perlu Revisi, atau Ditolak yang sesuai dengan filter yang dipilih.</p>
-                                                @can('create', \App\Models\Warga::class)
-                                                    <a href="{{ route('warga.create') }}" class="btn btn-sm btn-primary px-3 shadow-sm">
-                                                        <i class="bi bi-plus-lg me-1"></i> Tambah Calon Penerima Baru
-                                                    </a>
-                                                @endcan
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                                                </form>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <div class="py-4">
+                                            <span class="material-symbols-outlined text-muted mb-2" style="font-size: 44px;">person_search</span>
+                                            <h6 class="fw-bold text-dark mb-1 font-headline">Tidak ada data usulan yang cocok</h6>
+                                            <p class="text-muted small mb-3">Coba ubah kata kunci pencarian atau pilih filter status dan kelurahan lain.</p>
+                                            @can('create', \App\Models\Warga::class)
+                                                <a href="{{ route('warga.create') }}" class="btn btn-sm btn-primary px-3 shadow-sm">
+                                                    <i class="bi bi-plus-lg me-1"></i> Tambah Calon Penerima Baru
+                                                </a>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-
-                @include('pages.warga.partials._tabs_survei', ['wargas' => $wargas])
-
             </div>
 
-            <!-- Pagination Footer -->
-            @if($wargas->hasPages())
-                <div class="card-footer bg-white border-0 py-3 d-flex flex-wrap justify-content-between align-items-center">
-                    <small class="text-muted">
-                        Menampilkan <strong>{{ $wargas->firstItem() }}</strong> - <strong>{{ $wargas->lastItem() }}</strong> dari <strong>{{ $wargas->total() }}</strong> calon penerima
-                    </small>
-                    <div>
-                        {{ $wargas->links() }}
-                    </div>
-                </div>
-            @endif
+            <!-- Tab 2 & Tab 3: Kepemilikan & Survei Fisik -->
+            @include('pages.warga.partials._tabs_survei', ['wargas' => $wargas])
+
         </div>
+
+        <!-- Pagination Footer Versi Stitch -->
+        @if($wargas->hasPages())
+            <div class="p-3 bg-light border-top d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                <span class="font-stitch text-muted font-mono-num" style="font-size: 12.5px;">
+                    Menampilkan <strong>{{ $wargas->firstItem() }}</strong>–<strong>{{ $wargas->lastItem() }}</strong> dari <strong>{{ $wargas->total() }}</strong> calon penerima
+                </span>
+                <div>
+                    {{ $wargas->links() }}
+                </div>
+            </div>
+        @endif
     </div>
 </div>
 
-<!-- Modal Verifikasi Lapangan (Khusus Dinas & Superadmin untuk meloloskan status 0/3 ke status 1) -->
+<!-- Modal Verifikasi Lapangan (Khusus Dinas & Superadmin) -->
 @if($isDinas)
     @foreach($wargas as $warga)
         @php

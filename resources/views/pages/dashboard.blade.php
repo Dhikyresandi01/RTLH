@@ -406,53 +406,45 @@
                 </div>
                 <div class="card-body px-0 pt-0">
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0 align-middle">
-                            <thead class="table-light">
+                        <table class="stitch-table">
+                            <thead>
                                 <tr>
-                                    <th class="ps-4">Calon Penerima</th>
+                                    <th class="ps-3">Calon Penerima</th>
                                     <th>Wilayah</th>
                                     <th>Tahun</th>
                                     <th>Status Usulan</th>
-                                    <th class="text-end pe-4">Aksi</th>
+                                    <th class="text-end pe-3" style="width: 100px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($recentBantuan as $bantuan)
                                     <tr>
-                                        <td class="ps-4">
-                                            <div class="fw-bold text-dark">{{ $bantuan->warga->nama ?? 'Nama Warga' }}</div>
-                                            <small class="text-muted">NIK: {{ $bantuan->warga->nik ?? '-' }}</small>
+                                        <td class="ps-3">
+                                            <div class="fw-bold text-dark font-stitch" style="font-size: 13.5px;">{{ $bantuan->warga->nama ?? 'Nama Warga' }}</div>
+                                            <small class="text-muted font-mono-num">NIK: {{ $bantuan->warga->nik ?? '-' }}</small>
                                         </td>
                                         <td>
-                                            <div>{{ $bantuan->warga->wilayah->desa ?? 'Kelurahan' }}</div>
-                                            <small class="text-muted">{{ $bantuan->warga->wilayah->kecamatan ?? 'Kota Kediri' }}</small>
+                                            <div class="font-stitch fw-semibold text-dark" style="font-size: 13px;">{{ $bantuan->warga->wilayah->desa ?? 'Kelurahan' }}</div>
+                                            <small class="text-muted font-stitch" style="font-size: 11.5px;">{{ $bantuan->warga->wilayah->kecamatan ?? 'Kota Kediri' }}</small>
                                         </td>
                                         <td>
-                                            <span class="badge bg-light-secondary text-secondary">{{ $bantuan->tahun_bantuan }}</span>
+                                            <span class="badge rounded-pill font-mono-num" style="background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; font-size: 11px;">{{ $bantuan->tahun_bantuan }}</span>
                                         </td>
                                         <td>
-                                            @if($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DIAJUKAN)
-                                                <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Diajukan</span>
-                                            @elseif($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DIVERIFIKASI)
-                                                <span class="badge bg-info text-white"><i class="bi bi-search me-1"></i>Diverifikasi</span>
-                                            @elseif($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DISETUJUI)
-                                                <span class="badge bg-primary text-white"><i class="bi bi-check-circle me-1"></i>Disetujui</span>
-                                            @elseif($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_DIREALISASIKAN)
-                                                <span class="badge bg-success text-white"><i class="bi bi-hammer me-1"></i>Realisasi</span>
-                                            @elseif($bantuan->status_bantuan == \App\Models\Bantuan::STATUS_REVISI)
-                                                <span class="badge bg-secondary text-white"><i class="bi bi-arrow-repeat me-1"></i>Revisi</span>
-                                            @else
-                                                <span class="badge bg-danger text-white"><i class="bi bi-x-circle me-1"></i>Ditolak</span>
-                                            @endif
+                                            @include('pages.warga.partials._status_badge', [
+                                                'bantuan' => $bantuan,
+                                                'showVerifikator' => false,
+                                                'showCatatan' => false,
+                                            ])
                                         </td>
-                                        <td class="text-end pe-4">
+                                        <td class="text-end pe-3">
                                             @if(Route::has('bantuan.show'))
-                                                <a href="{{ route('bantuan.show', $bantuan->id_bantuan) }}" class="btn btn-sm btn-light-primary">
-                                                    <i class="bi bi-eye"></i> Detail
+                                                <a href="{{ route('bantuan.show', $bantuan->id_bantuan) }}" class="stitch-btn-icon" title="Lihat Detail Bantuan">
+                                                    <span class="material-symbols-outlined" style="font-size: 17px;">visibility</span>
                                                 </a>
                                             @else
-                                                <a href="{{ route('warga.show', ['warga' => $bantuan->id_warga, 'from' => 'dashboard']) }}" class="btn btn-sm btn-light-primary">
-                                                    <i class="bi bi-eye"></i> Warga
+                                                <a href="{{ route('warga.show', ['warga' => $bantuan->id_warga, 'from' => 'dashboard']) }}" class="stitch-btn-icon" title="Lihat Detail Warga">
+                                                    <span class="material-symbols-outlined" style="font-size: 17px;">visibility</span>
                                                 </a>
                                             @endif
                                         </td>
@@ -461,10 +453,10 @@
                                     <tr>
                                         <td colspan="5" class="text-center py-4 text-muted">
                                             <div class="py-3">
-                                                <i class="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-50"></i>
-                                                <p class="mb-2">Belum ada data usulan bantuan RTLH terkini.</p>
+                                                <span class="material-symbols-outlined text-muted mb-2" style="font-size: 40px;">inbox</span>
+                                                <p class="mb-2 font-stitch small">Belum ada data usulan bantuan RTLH terkini.</p>
                                                 @if(Route::has('warga.create'))
-                                                    <a href="{{ route('warga.create') }}" class="btn btn-sm btn-primary">
+                                                    <a href="{{ route('warga.create') }}" class="btn btn-sm btn-primary font-stitch">
                                                         <i class="bi bi-plus-lg me-1"></i> Tambah Usulan Calon Penerima
                                                     </a>
                                                 @endif

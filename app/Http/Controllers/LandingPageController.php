@@ -24,6 +24,10 @@ class LandingPageController extends Controller
         $kontak           = LandingSetting::get('kontak');
         $faqItems         = LandingSetting::get('faq_items');
         $publikasi        = LandingSetting::get('publikasi');
+        $beritaList       = LandingSetting::get('berita_list');
+        if (empty($beritaList) || !is_array($beritaList)) {
+            $beritaList = LandingSetting::getDefault('berita_list') ?: [];
+        }
         $realisasiGallery = LandingSetting::get('realisasi_gallery');
         $statistikMode    = LandingSetting::get('statistik_mode', 'auto');
         $statistikManual  = LandingSetting::get('statistik_manual');
@@ -122,6 +126,7 @@ class LandingPageController extends Controller
             'kontak',
             'faqItems',
             'publikasi',
+            'beritaList',
             'realisasiGallery',
             'statistikMode',
             'stats',
@@ -141,6 +146,10 @@ class LandingPageController extends Controller
         $kontak           = LandingSetting::get('kontak');
         $faqItems         = LandingSetting::get('faq_items');
         $publikasi        = LandingSetting::get('publikasi');
+        $beritaList       = LandingSetting::get('berita_list');
+        if (empty($beritaList) || !is_array($beritaList)) {
+            $beritaList = LandingSetting::getDefault('berita_list') ?: [];
+        }
         $realisasiGallery = LandingSetting::get('realisasi_gallery');
         $statistikMode    = LandingSetting::get('statistik_mode', 'auto');
         $statistikManual  = LandingSetting::get('statistik_manual');
@@ -151,6 +160,7 @@ class LandingPageController extends Controller
             'kontak',
             'faqItems',
             'publikasi',
+            'beritaList',
             'realisasiGallery',
             'statistikMode',
             'statistikManual'
@@ -402,6 +412,121 @@ class LandingPageController extends Controller
     }
 
     /**
+     * Tambah Artikel Berita Baru
+     */
+    public function storeBerita(Request $request)
+    {
+        $request->validate([
+            'judul'      => 'required|string|max:255',
+            'kategori'   => 'required|string|max:100',
+            'tanggal'    => 'required|string|max:100',
+            'ringkasan'  => 'required|string|max:1000',
+            'isi'        => 'nullable|string|max:10000',
+            'image_file' => 'nullable|image|max:4096',
+            'image_url'  => 'nullable|string|max:1000',
+        ]);
+
+        $beritaList = LandingSetting::get('berita_list');
+        if (empty($beritaList) || !is_array($beritaList)) {
+            $beritaList = LandingSetting::getDefault('berita_list') ?: [];
+        }
+
+        $imgUrl = '/assets/images/samples/building.jpg';
+        if ($request->hasFile('image_file')) {
+            $path   = $request->file('image_file')->store('landing', 'public');
+            $imgUrl = Storage::url($path);
+        } elseif ($request->filled('image_url')) {
+            $imgUrl = $request->image_url;
+        }
+
+        $newId = count($beritaList) > 0 ? (max(array_column($beritaList, 'id')) + 1) : 1;
+
+        $newBerita = [
+            'id'        => $newId,
+            'judul'     => $request->judul,
+            'kategori'  => $request->kategori,
+            'tanggal'   => $request->tanggal,
+            'ringkasan' => $request->ringkasan,
+            'isi'       => $request->isi ?: $request->ringkasan,
+            'image_url' => $imgUrl,
+        ];
+
+        // Tempatkan berita terbaru di urutan paling atas
+        array_unshift($beritaList, $newBerita);
+
+        LandingSetting::set('berita_list', $beritaList, 'berita');
+
+        return back()->with('success', 'Berita baru "' . $request->judul . '" berhasil ditambahkan.');
+    }
+
+    /**
+     * Perbarui Artikel Berita
+     */
+    public function updateBerita(Request $request, $id)
+    {
+        $request->validate([
+            'judul'      => 'required|string|max:255',
+            'kategori'   => 'required|string|max:100',
+            'tanggal'    => 'required|string|max:100',
+            'ringkasan'  => 'required|string|max:1000',
+            'isi'        => 'nullable|string|max:10000',
+            'image_file' => 'nullable|image|max:4096',
+            'image_url'  => 'nullable|string|max:1000',
+        ]);
+
+        $beritaList = LandingSetting::get('berita_list');
+        if (empty($beritaList) || !is_array($beritaList)) {
+            $beritaList = LandingSetting::getDefault('berita_list') ?: [];
+        }
+
+        $found = false;
+        foreach ($beritaList as &$b) {
+            if ((string) ($b['id'] ?? '') === (string) $id) {
+                $imgUrl = $b['image_url'] ?? '/assets/images/samples/building.jpg';
+                if ($request->hasFile('image_file')) {
+                    $path   = $request->file('image_file')->store('landing', 'public');
+                    $imgUrl = Storage::url($path);
+                } elseif ($request->filled('image_url')) {
+                    $imgUrl = $request->image_url;
+                }
+
+                $b['judul']     = $request->judul;
+                $b['kategori']  = $request->kategori;
+                $b['tanggal']   = $request->tanggal;
+                $b['ringkasan'] = $request->ringkasan;
+                $b['isi']       = $request->isi ?: $request->ringkasan;
+                $b['image_url'] = $imgUrl;
+                $found = true;
+                break;
+            }
+        }
+
+        if ($found) {
+            LandingSetting::set('berita_list', $beritaList, 'berita');
+            return back()->with('success', 'Berita berhasil diperbarui.');
+        }
+
+        return back()->with('error', 'Berita tidak ditemukan.');
+    }
+
+    /**
+     * Hapus Artikel Berita
+     */
+    public function deleteBerita($id)
+    {
+        $beritaList = LandingSetting::get('berita_list');
+        if (empty($beritaList) || !is_array($beritaList)) {
+            $beritaList = LandingSetting::getDefault('berita_list') ?: [];
+        }
+
+        $beritaList = array_values(array_filter($beritaList, fn($b) => (string) ($b['id'] ?? '') !== (string) $id));
+
+        LandingSetting::set('berita_list', $beritaList, 'berita');
+
+        return back()->with('success', 'Berita berhasil dihapus.');
+    }
+
+    /**
      * 8. Update Galeri Realisasi Before-After
      */
     public function updateRealisasi(Request $request)
@@ -459,7 +584,7 @@ class LandingPageController extends Controller
     public function resetSection(Request $request)
     {
         $section = $request->input('section');
-        $validKeys = ['hero_slides', 'profil', 'kontak', 'faq_items', 'publikasi', 'realisasi_gallery', 'statistik_manual'];
+        $validKeys = ['hero_slides', 'profil', 'kontak', 'faq_items', 'publikasi', 'berita_list', 'realisasi_gallery', 'statistik_manual'];
 
         if (in_array($section, $validKeys)) {
             $default = LandingSetting::getDefault($section);

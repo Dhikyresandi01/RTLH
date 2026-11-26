@@ -118,6 +118,36 @@ class LandingSetting extends Model
                 ],
             ],
 
+            'berita_list' => [
+                [
+                    'id' => 1,
+                    'judul' => 'DPKP Kota Kediri Rampungkan Verifikasi Usulan RTLH Tahap Akhir',
+                    'kategori' => 'Verifikasi Teknis',
+                    'tanggal' => '18 November 2026',
+                    'ringkasan' => 'Tim fasilitator lapangan bersama perangkat kelurahan menyelesaikan verifikasi teknis untuk penetapan alokasi penerima bantuan RTLH tahun berjalan.',
+                    'isi' => 'Pemerintah Kota Kediri melalui Dinas Perumahan dan Kawasan Permukiman (DPKP) telah merampungkan tahapan verifikasi lapangan secara menyeluruh di 46 kelurahan se-Kota Kediri. Verifikasi ini bertujuan memastikan ketepatan sasaran bantuan perbaikan rumah berdasarkan standar keselamatan struktur bangunan (atap, lantai, dinding), kecukupan ruang, serta sanitasi yang sehat.',
+                    'image_url' => '/assets/images/samples/building.jpg',
+                ],
+                [
+                    'id' => 2,
+                    'judul' => 'Sosialisasi Mekanisme Pengusulan Bantuan Perumahan Swadaya (BSPS) Tahun 2027',
+                    'kategori' => 'Sosialisasi',
+                    'tanggal' => '10 November 2026',
+                    'ringkasan' => 'DPKP menggelar rapat koordinasi bersama tim kelurahan dan LPMK guna menyamakan persepsi kelengkapan administrasi pengusulan bantuan.',
+                    'isi' => 'Sebagai langkah percepatan penanganan kawasan permukiman yang sehat dan tertata, DPKP Kota Kediri mengadakan forum sosialisasi terpadu terkait pedoman teknis pengusulan BSPS dan RTLH APBD tahun mendatang. Warga dihimbau melengkapi dokumen legalitas tanah dan bukti kependudukan melalui kantor kelurahan setempat.',
+                    'image_url' => '/assets/images/bg/4.jpg',
+                ],
+                [
+                    'id' => 3,
+                    'judul' => 'Monitoring & Evaluasi Realisasi Penanganan RTLH di Tiga Kecamatan',
+                    'kategori' => 'Monitoring Lapangan',
+                    'tanggal' => '02 November 2026',
+                    'ringkasan' => 'Pemeriksaan progres fisik konstruksi renovasi rumah swadaya di Kecamatan Mojoroto, Kota, dan Pesantren mencapai 88% selesai.',
+                    'isi' => 'Tim pengawas teknis DPKP Kota Kediri melakukan inspeksi fisik berkala terhadap rumah-rumah penerima manfaat program RTLH. Hingga triwulan IV, progres rata-rata perbaikan struktur atap dan dinding bata plester di 3 kecamatan telah melampaui target berkala dengan standar kualitas material yang terjamin.',
+                    'image_url' => '/assets/images/samples/architecture1.jpg',
+                ],
+            ],
+
             'publikasi' => [
                 'berita_utama' => [
                     'kategori' => 'Berita',

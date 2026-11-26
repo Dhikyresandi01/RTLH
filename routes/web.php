@@ -55,6 +55,9 @@ Route::middleware('auth')->group(function () {
         Route::post('landing-page/profil-kontak', [LandingPageController::class, 'updateProfilKontak'])->name('landing-page.update-profil-kontak');
         Route::post('landing-page/statistik', [LandingPageController::class, 'updateStatistik'])->name('landing-page.update-statistik');
         Route::post('landing-page/publikasi', [LandingPageController::class, 'updatePublikasi'])->name('landing-page.update-publikasi');
+        Route::post('landing-page/berita', [LandingPageController::class, 'storeBerita'])->name('landing-page.store-berita');
+        Route::post('landing-page/berita/{id}', [LandingPageController::class, 'updateBerita'])->name('landing-page.update-berita');
+        Route::delete('landing-page/berita/{id}', [LandingPageController::class, 'deleteBerita'])->name('landing-page.delete-berita');
         Route::post('landing-page/realisasi', [LandingPageController::class, 'updateRealisasi'])->name('landing-page.update-realisasi');
         Route::post('landing-page/faq', [LandingPageController::class, 'storeFaq'])->name('landing-page.store-faq');
         Route::delete('landing-page/faq/{id}', [LandingPageController::class, 'deleteFaq'])->name('landing-page.delete-faq');

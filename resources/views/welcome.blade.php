@@ -14,6 +14,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
 
+    <!-- Leaflet.js Interactive Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        .custom-district-marker {
+            background: transparent;
+            border: none;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25);
+            padding: 4px;
+        }
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            line-height: 1.4;
+        }
+        #kediri-map {
+            outline: none;
+            z-index: 10;
+        }
+    </style>
+
     <!-- Tailwind CSS with Official Design System Tokens -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
@@ -110,7 +133,7 @@
                 <a href="#data-rtlh" class="text-sm font-medium text-on-surface hover:text-primary py-2 transition-colors">Data RTLH</a>
                 <a href="#program" class="text-sm font-medium text-on-surface hover:text-primary py-2 transition-colors">Program</a>
                 <a href="#realisasi" class="text-sm font-medium text-on-surface hover:text-primary py-2 transition-colors">Realisasi</a>
-                <a href="#publikasi" class="text-sm font-medium text-on-surface hover:text-primary py-2 transition-colors">Publikasi</a>
+                <a href="#publikasi" class="text-sm font-medium text-on-surface hover:text-primary py-2 transition-colors">Berita</a>
                 <a href="#faq" class="text-sm font-medium text-on-surface hover:text-primary py-2 transition-colors">FAQ</a>
             </nav>
 
@@ -157,9 +180,12 @@
         <!-- 2. HERO: Photographic Slider -->
         <section id="beranda" class="relative w-full min-h-[560px] lg:h-[580px] bg-dark-blue overflow-hidden flex items-center">
             @foreach($heroSlides as $idx => $slide)
-                <div id="hero-slide-{{ $idx }}" class="hero-slide absolute inset-0 transition-opacity duration-500 {{ $idx === 0 ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0' }}">
-                    <img src="{{ $slide['image_url'] ?? '' }}" alt="{{ $slide['image_alt'] ?? 'Hunian Kota Kediri' }}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-dark-blue/70 bg-gradient-to-r from-dark-blue/90 via-dark-blue/75 to-transparent"></div>
+                <div id="hero-slide-{{ $idx }}" class="hero-slide absolute inset-0 transition-opacity duration-700 {{ $idx === 0 ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none z-0' }}">
+                    <!-- Background Image (Absolute to prevent pushing content downward) -->
+                    <img src="{{ $slide['image_url'] ?? '' }}" alt="{{ $slide['image_alt'] ?? 'Hunian Kota Kediri' }}" class="absolute inset-0 w-full h-full object-cover">
+                    <!-- Gradient Scrim Overlay -->
+                    <div class="absolute inset-0 bg-dark-blue/70 bg-gradient-to-r from-dark-blue/95 via-dark-blue/80 to-transparent"></div>
+                    <!-- Slide Content Text & Buttons -->
                     <div class="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center py-16">
                         <div class="max-w-2xl flex flex-col gap-4">
                             <div class="flex items-center gap-2">
@@ -371,31 +397,23 @@
                         <span class="text-xs font-bold uppercase tracking-wider text-primary">Peta Sebaran Spasial</span>
                         <h2 class="text-2xl sm:text-3xl font-bold text-on-surface mt-1">Sebaran Penanganan per Kecamatan</h2>
                     </div>
-                    <div class="relative flex-1 min-h-[360px] border border-outline-variant rounded overflow-hidden bg-surface shadow-sm">
-                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrCnz-JuM5liXyzhOhdYTqeJOwDRRHb7o6S8o-8_wdm8cWJyoOmo-0zJyl-iBBoaHCFylNVUE571G2ijQk-uvq2hTSSdpIXAnx69mFRypq4dsZoMFSNo_Wde25MzRDJrAEjP70eYGFqMm-RCPBTGFLLVVG8QZsN7PIP1uNTc1YMsLjeJo5JtcNPc00_5Lt7TC5yBQRkfR6GREglM_l1r4JGDCkFKbogNMWdDA51l8HQoUyhGEoU-EL4bPw" alt="Peta Administratif Kota Kediri" class="w-full h-full object-cover">
-                        
-                        <!-- Map Pins -->
-                        <button type="button" onclick="selectDistrict('Mojoroto')" id="map-pin-mojoroto" class="absolute top-[32%] left-[22%] px-3 py-1.5 rounded bg-primary text-white border-2 border-white font-semibold text-xs shadow-lg hover:scale-105 transition-all">
-                            Kec. Mojoroto
-                        </button>
-                        <button type="button" onclick="selectDistrict('Kota')" id="map-pin-kota" class="absolute top-[46%] left-[50%] px-3 py-1.5 rounded bg-secondary text-white border-2 border-white font-semibold text-xs shadow-lg hover:scale-105 transition-all">
-                            Kec. Kota
-                        </button>
-                        <button type="button" onclick="selectDistrict('Pesantren')" id="map-pin-pesantren" class="absolute top-[58%] left-[70%] px-3 py-1.5 rounded bg-dark-blue text-white border-2 border-white font-semibold text-xs shadow-lg hover:scale-105 transition-all">
-                            Kec. Pesantren
-                        </button>
+                    <div class="relative flex-1 min-h-[420px] lg:min-h-[450px] border border-outline-variant rounded-lg overflow-hidden bg-surface shadow-sm">
+                        <!-- Leaflet Interactive Map Container -->
+                        <div id="kediri-map" class="w-full h-full min-h-[420px] lg:min-h-[450px]"></div>
 
-                        <div class="absolute bottom-3 left-3 px-2.5 py-1 bg-surface/95 border border-outline-variant rounded text-[11px] text-on-surface-muted font-medium backdrop-blur">
-                            Peta Wilayah Administratif Kota Kediri (3 Kecamatan • 46 Kelurahan)
+                        <!-- Badge Overlay Info -->
+                        <div class="absolute bottom-3 left-3 z-[400] px-3 py-1.5 bg-surface/90 border border-outline-variant rounded-md text-[11px] text-on-surface font-medium backdrop-blur shadow-sm flex items-center gap-2 pointer-events-none">
+                            <span class="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                            <span>Peta Interaktif Kota Kediri &bull; 3 Kecamatan &bull; 46 Kelurahan</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="lg:col-span-5 flex flex-col justify-between bg-surface border border-outline-variant rounded p-6 shadow-sm">
+                <div class="lg:col-span-5 flex flex-col justify-between bg-surface border border-outline-variant rounded-lg p-6 shadow-sm">
                     <div>
                         <span class="text-xs font-bold uppercase tracking-wider text-on-surface-muted">Statistik Agregat Wilayah</span>
                         <h3 id="map-district-title" class="text-xl sm:text-2xl font-bold text-on-surface mt-1">Kecamatan Mojoroto</h3>
-                        <p class="text-xs text-on-surface-muted mt-1">Klik penanda kecamatan pada peta atau tombol di bawah ini untuk melihat ringkasan agregat.</p>
+                        <p class="text-xs text-on-surface-muted mt-1">Klik penanda kecamatan pada peta interaktif atau pilih tombol kecamatan di bawah.</p>
 
                         <div class="mt-6 divide-y divide-outline-variant border-y border-outline-variant">
                             <div class="py-3 flex items-center justify-between">
@@ -418,9 +436,9 @@
                     </div>
 
                     <div class="pt-6 flex items-center gap-2">
-                        <button type="button" onclick="selectDistrict('Mojoroto')" class="flex-1 py-2 px-3 rounded border border-outline-variant bg-surface-subtle hover:border-primary hover:bg-surface font-semibold text-xs text-on-surface transition-all">Mojoroto</button>
-                        <button type="button" onclick="selectDistrict('Kota')" class="flex-1 py-2 px-3 rounded border border-outline-variant bg-surface-subtle hover:border-primary hover:bg-surface font-semibold text-xs text-on-surface transition-all">Kota</button>
-                        <button type="button" onclick="selectDistrict('Pesantren')" class="flex-1 py-2 px-3 rounded border border-outline-variant bg-surface-subtle hover:border-primary hover:bg-surface font-semibold text-xs text-on-surface transition-all">Pesantren</button>
+                        <button type="button" onclick="selectDistrict('Mojoroto')" id="btn-dist-mojoroto" class="district-btn flex-1 py-2 px-3 rounded border font-semibold text-xs transition-all bg-primary text-white border-primary shadow-sm">Mojoroto</button>
+                        <button type="button" onclick="selectDistrict('Kota')" id="btn-dist-kota" class="district-btn flex-1 py-2 px-3 rounded border font-semibold text-xs transition-all bg-surface-subtle text-on-surface border-outline-variant hover:border-primary">Kota</button>
+                        <button type="button" onclick="selectDistrict('Pesantren')" id="btn-dist-pesantren" class="district-btn flex-1 py-2 px-3 rounded border font-semibold text-xs transition-all bg-surface-subtle text-on-surface border-outline-variant hover:border-primary">Pesantren</button>
                     </div>
                 </div>
             </div>
@@ -440,7 +458,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
                     <!-- Program 1: BSPS -->
                     <article class="flex flex-col border border-outline-variant rounded overflow-hidden bg-surface shadow-sm hover:shadow-md transition-shadow">
-                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrA9XfhqrcYvkxOtL-VrsH1ew_2pU0pB-JU6GPBn2I1_tkskc3Xmgy7HVcGPPU9qppee6wkbr-pp7OSeDr5vJb-g4Zae7TjiVYFl0zhFq1oYUgAtx2NteJVQQ7I4zsI2yBWP5MaSPM8JkEbBqWkNXCcEaFqvq131v6CqYPemMZ9uqF4KB0DoaWO99DtH76U0gHP4yX9COyHl9GEvRKrcWpjpUGd35dckD8-Fmc7w6LH8nPpZtUtWoQ" alt="Program BSPS" class="w-full h-48 object-cover">
+                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrA9XfhqrcYvkxOtL-VrsH1ew_2pU0pB-JU6GPBn2I1_tkskc3Xmgy7HVcGPPU9qppee6wkbr-pp7OSeDr5vJb-g4Zae7TjiVYFl0zhFq1oYUgAtx2NteJVQQ7I4zsI2yBWP5MaSPM8JkEbBqWkNXCcEaFqvq131v6CqYPemMZ9uqF4KB0DoaWO99DtH76U0gHP4yX9COyHl9GEvRKrcWpjpUGd35dckD8-Fmc7w6LH8nPpZtUtWoQ" alt="Program BSPS" referrerpolicy="no-referrer" class="w-full h-48 object-cover">
                         <div class="p-5 flex flex-col gap-2 flex-1 justify-between">
                             <div>
                                 <span class="text-xs font-bold text-secondary uppercase tracking-wider">APBN • Kementerian PKP</span>
@@ -458,7 +476,7 @@
 
                     <!-- Program 2: APBD Kota -->
                     <article class="flex flex-col border border-outline-variant rounded overflow-hidden bg-surface shadow-sm hover:shadow-md transition-shadow">
-                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrDvV5w_i9Ornem7HcBVWldMMn2-8kIsipV_jc8WrU_APTLHqMChoqLM9PfWa4s0ijnRtzKgVBmhnMdPDI-foAZBrHZtUx2e6SmuPx_KmNdsRhjl_V2EsmLvomVFZzXRA5g1S8YLnCHwSIlL6LCUV49R8cAIkwa_vaLnPgJWMyEM460mOYZcbLHwYkUpXAYd9lI5k22VxkgTrmOU4MsUSmSEiqTu-U-mS6k-2MZa7BiWawPQrhFoPw" alt="Program RTLH APBD" class="w-full h-48 object-cover">
+                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrDvV5w_i9Ornem7HcBVWldMMn2-8kIsipV_jc8WrU_APTLHqMChoqLM9PfWa4s0ijnRtzKgVBmhnMdPDI-foAZBrHZtUx2e6SmuPx_KmNdsRhjl_V2EsmLvomVFZzXRA5g1S8YLnCHwSIlL6LCUV49R8cAIkwa_vaLnPgJWMyEM460mOYZcbLHwYkUpXAYd9lI5k22VxkgTrmOU4MsUSmSEiqTu-U-mS6k-2MZa7BiWawPQrhFoPw" alt="Program RTLH APBD" referrerpolicy="no-referrer" class="w-full h-48 object-cover">
                         <div class="p-5 flex flex-col gap-2 flex-1 justify-between">
                             <div>
                                 <span class="text-xs font-bold text-primary uppercase tracking-wider">APBD • Pemerintah Kota Kediri</span>
@@ -476,7 +494,7 @@
 
                     <!-- Program 3: Bantuan Khusus -->
                     <article class="flex flex-col border border-outline-variant rounded overflow-hidden bg-surface shadow-sm hover:shadow-md transition-shadow">
-                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrD6PgT4WbLbLBnyMzyhM5MmF8ZVSLMJ0N3uSunEmqULlh_Fpn1r37WbVVh-xWxQYsarDa5uCwfarZ6C6vDJrnAhfeqw1ffCWJgwetMImc-Hwj2yajcHn8lRyFv8c1n6JvXSClv_Ps25nWD0j8PO8gEDgCljTbJpavJWPxfJABRNaASNr15G7sr0zzfJJExPggFb0P1iOOB5LWz31oXu12rw7-5rHECzX_kWMfZk6sdZicAJtbwSbolLf0uG" alt="Bantuan Khusus Stimulan" class="w-full h-48 object-cover">
+                        <img src="https://lh3.googleusercontent.com/aida/ALJJyrD6PgT4WbLbLBnyMzyhM5MmF8ZVSLMJ0N3uSunEmqULlh_Fpn1r37WbVVh-xWxQYsarDa5uCwfarZ6C6vDJrnAhfeqw1ffCWJgwetMImc-Hwj2yajcHn8lRyFv8c1n6JvXSClv_Ps25nWD0j8PO8gEDgCljTbJpavJWPxfJABRNaASNr15G7sr0zzfJJExPggFb0P1iOOB5LWz31oXu12rw7-5rHECzX_kWMfZk6sdZicAJtbwSbolLf0uG" alt="Bantuan Khusus Stimulan" referrerpolicy="no-referrer" class="w-full h-48 object-cover">
                         <div class="p-5 flex flex-col gap-2 flex-1 justify-between">
                             <div>
                                 <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Penanganan Khusus &amp; Prioritas</span>
@@ -610,46 +628,101 @@
         <!-- 10. PUBLIKASI & FAQ -->
         <section id="publikasi" class="py-16 lg:py-20 bg-surface-subtle">
             <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
-                <!-- Left: Berita & Pengumuman -->
+                <!-- Left: Berita Terkini -->
                 <div class="lg:col-span-7 flex flex-col gap-6">
                     <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-primary">Publikasi &amp; Informasi</span>
-                        <h2 class="text-2xl sm:text-3xl font-bold text-on-surface mt-1">Berita, Pengumuman &amp; Laporan Publik</h2>
+                        <span class="text-xs font-bold uppercase tracking-wider text-primary">Kabar &amp; Informasi</span>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-on-surface mt-1">Berita Seputar Penanganan RTLH</h2>
+                        <p class="text-xs sm:text-sm text-on-surface-muted mt-1">
+                            Informasi dan dokumentasi kegiatan survei teknis, penyaluran bantuan, serta progres fisik peningkatan kualitas hunian Kota Kediri.
+                        </p>
                     </div>
 
-                    @php
-                        $berita = $publikasi['berita_utama'] ?? [];
-                        $pengumuman = $publikasi['daftar_pengumuman'] ?? [];
-                    @endphp
+                    @if(isset($beritaList) && count($beritaList) > 0)
+                        @php
+                            $utama = $beritaList[0];
+                            $lainnya = array_slice($beritaList, 1);
+                        @endphp
 
-                    <!-- Berita Utama -->
-                    <article class="grid grid-cols-1 sm:grid-cols-12 gap-4 pb-6 border-b border-outline-variant">
-                        <div class="sm:col-span-5">
-                            <img src="{{ $berita['image_url'] ?? '' }}" alt="Berita DPKP Kota Kediri" class="w-full h-44 object-cover rounded border border-outline-variant shadow-sm">
-                        </div>
-                        <div class="sm:col-span-7 flex flex-col justify-between">
-                            <div>
-                                <span class="text-xs font-bold text-primary">{{ $berita['kategori'] ?? 'Berita' }} • {{ $berita['tanggal'] ?? '' }}</span>
-                                <h3 class="font-bold text-base text-on-surface mt-1 leading-snug">{{ $berita['judul'] ?? '' }}</h3>
-                                <p class="text-xs sm:text-sm text-on-surface-muted mt-2 leading-relaxed">{{ $berita['ringkasan'] ?? '' }}</p>
+                        <!-- Berita Utama / Unggulan -->
+                        <article class="grid grid-cols-1 sm:grid-cols-12 gap-5 p-4 rounded-xl bg-surface border border-outline-variant shadow-sm hover:border-primary/50 transition-all">
+                            <div class="sm:col-span-5 overflow-hidden rounded-lg">
+                                <img src="{{ $utama['image_url'] ?? asset('assets/images/samples/building.jpg') }}" 
+                                     alt="{{ $utama['judul'] ?? 'Berita DPKP' }}" 
+                                     class="w-full h-48 sm:h-full object-cover rounded-lg hover:scale-105 transition-all duration-300"
+                                     onerror="this.onerror=null; this.src='{{ asset('assets/images/samples/building.jpg') }}';">
                             </div>
-                        </div>
-                    </article>
-
-                    <!-- Daftar Pengumuman & Laporan -->
-                    <div class="divide-y divide-outline-variant">
-                        @foreach($pengumuman as $item)
-                            <div class="py-3 flex items-center justify-between gap-4">
+                            <div class="sm:col-span-7 flex flex-col justify-between">
                                 <div>
-                                    <span class="text-[11px] font-bold text-secondary uppercase">{{ $item['tipe'] ?? 'Pengumuman' }} • {{ $item['tanggal'] ?? '' }}</span>
-                                    <p class="font-bold text-sm text-on-surface mt-0.5">{{ $item['judul'] ?? '' }}</p>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary-container text-primary">
+                                            {{ $utama['kategori'] ?? 'Berita' }}
+                                        </span>
+                                        <span class="text-xs text-on-surface-muted flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-sm">calendar_today</span>
+                                            {{ $utama['tanggal'] ?? '' }}
+                                        </span>
+                                    </div>
+                                    <h3 class="font-bold text-base sm:text-lg text-on-surface hover:text-primary transition-colors cursor-pointer leading-snug" onclick="openBeritaModal(0)">
+                                        {{ $utama['judul'] ?? '' }}
+                                    </h3>
+                                    <p class="text-xs sm:text-sm text-on-surface-muted mt-2 line-clamp-3 leading-relaxed">
+                                        {{ $utama['ringkasan'] ?? '' }}
+                                    </p>
                                 </div>
-                                <span class="material-symbols-outlined text-primary text-xl shrink-0">
-                                    {{ ($item['tipe'] ?? '') === 'Laporan Publik' ? 'download' : 'arrow_forward' }}
-                                </span>
+                                <div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+                                    <button type="button" onclick="openBeritaModal(0)" class="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-hover">
+                                        <span>Baca Selengkapnya</span>
+                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                    </button>
+                                </div>
                             </div>
-                        @endforeach
-                    </div>
+                        </article>
+
+                        <!-- Daftar Berita Lainnya (Jika ada lebih dari 1 berita) -->
+                        @if(count($lainnya) > 0)
+                            <div class="flex flex-col gap-3">
+                                <span class="text-xs font-bold text-on-surface uppercase tracking-wider">Berita Lainnya</span>
+                                <div class="divide-y divide-outline-variant border-y border-outline-variant">
+                                    @foreach($lainnya as $subIdx => $b)
+                                        @php $actualIdx = $subIdx + 1; @endphp
+                                        <div class="py-3.5 flex items-center gap-4 group cursor-pointer hover:bg-surface-container/50 px-2 rounded-lg transition-colors" onclick="openBeritaModal({{ $actualIdx }})">
+                                            <div class="w-20 h-16 sm:w-24 sm:h-16 shrink-0 rounded overflow-hidden bg-surface-container border border-outline-variant">
+                                                <img src="{{ $b['image_url'] ?? asset('assets/images/samples/building.jpg') }}" 
+                                                     alt="{{ $b['judul'] ?? 'Berita' }}" 
+                                                     class="w-full h-full object-cover group-hover:scale-105 transition-all"
+                                                     onerror="this.onerror=null; this.src='{{ asset('assets/images/samples/building.jpg') }}';">
+                                            </div>
+                                            <div class="flex-grow min-w-0">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="text-[10px] font-bold text-secondary uppercase bg-secondary-container px-2 py-0.5 rounded">
+                                                        {{ $b['kategori'] ?? 'Kegiatan' }}
+                                                    </span>
+                                                    <span class="text-[11px] text-on-surface-muted">
+                                                        {{ $b['tanggal'] ?? '' }}
+                                                    </span>
+                                                </div>
+                                                <h4 class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors line-clamp-1 leading-snug">
+                                                    {{ $b['judul'] ?? '' }}
+                                                </h4>
+                                                <p class="text-xs text-on-surface-muted line-clamp-1 mt-0.5">
+                                                    {{ $b['ringkasan'] ?? '' }}
+                                                </p>
+                                            </div>
+                                            <span class="material-symbols-outlined text-primary text-lg shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                arrow_forward
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    @else
+                        <div class="p-8 text-center bg-surface border border-outline-variant rounded-xl text-on-surface-muted">
+                            <span class="material-symbols-outlined text-4xl text-on-surface-muted mb-2">newspaper</span>
+                            <p class="text-sm">Belum ada artikel berita yang dipublikasikan saat ini.</p>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Right: FAQ & Kontak -->
@@ -747,6 +820,18 @@
         </div>
     </div>
 
+    <!-- MODAL: Pembaca Artikel Berita Lengkap -->
+    <div id="berita-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-dark-blue/70 backdrop-blur-sm" role="dialog" aria-modal="true">
+        <div class="bg-surface rounded-xl max-w-2xl w-full p-6 shadow-2xl border border-outline-variant relative max-h-[90vh] overflow-y-auto">
+            <button type="button" onclick="closeBeritaModal()" class="absolute top-4 right-4 text-on-surface-muted hover:text-on-surface p-1 rounded-full hover:bg-surface-container">
+                <span class="material-symbols-outlined text-2xl">close</span>
+            </button>
+            <div id="berita-modal-content">
+                <!-- Filled dynamically by JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- Client-Side JavaScript -->
     <script>
         // Mobile Navigation Toggle
@@ -758,11 +843,13 @@
         // Hero Slider
         let currentSlide = 0;
         const totalSlides = {{ count($heroSlides) }};
+        let heroTimer = null;
 
-        function setHeroSlide(idx) {
-            currentSlide = idx;
+        function setHeroSlide(idx, restartTimer = true) {
+            currentSlide = (idx + totalSlides) % totalSlides;
+
             document.querySelectorAll('.hero-slide').forEach((el, i) => {
-                if (i === idx) {
+                if (i === currentSlide) {
                     el.classList.remove('opacity-0', 'pointer-events-none', 'z-0');
                     el.classList.add('opacity-100', 'z-10');
                 } else {
@@ -774,22 +861,42 @@
             for (let i = 0; i < totalSlides; i++) {
                 const dot = document.getElementById('hero-dot-' + i);
                 if (dot) {
-                    dot.classList.toggle('bg-gold', i === idx);
-                    dot.classList.toggle('bg-white/40', i !== idx);
+                    dot.classList.toggle('bg-gold', i === currentSlide);
+                    dot.classList.toggle('bg-white/40', i !== currentSlide);
                 }
+            }
+
+            if (restartTimer) {
+                resetHeroTimer();
             }
         }
 
         function nextHeroSlide() {
-            setHeroSlide((currentSlide + 1) % totalSlides);
+            setHeroSlide(currentSlide + 1);
         }
 
         function prevHeroSlide() {
-            setHeroSlide((currentSlide - 1 + totalSlides) % totalSlides);
+            setHeroSlide(currentSlide - 1);
         }
 
-        // Auto slide interval
-        setInterval(nextHeroSlide, 7000);
+        function resetHeroTimer() {
+            if (heroTimer) clearInterval(heroTimer);
+            heroTimer = setInterval(nextHeroSlide, 6500);
+        }
+
+        // Jalankan timer awal
+        resetHeroTimer();
+
+        // Pause pergantian otomatis saat kursor mouse berada di area banner
+        const heroSection = document.getElementById('beranda');
+        if (heroSection) {
+            heroSection.addEventListener('mouseenter', () => {
+                if (heroTimer) clearInterval(heroTimer);
+            });
+            heroSection.addEventListener('mouseleave', () => {
+                resetHeroTimer();
+            });
+        }
 
         // Data Kelurahan dari Laravel
         const rtlhRows = @json($kelurahanData);
@@ -866,10 +973,87 @@
         // Initialize table
         renderTable();
 
-        // Peta Spasial District Selector
+        // Peta Spasial District Selector & Leaflet Initialization
         const districtData = @json($districtStats);
 
-        function selectDistrict(name) {
+        const districtCoords = {
+            'Mojoroto': { lat: -7.8115, lng: 111.9890, color: '#054735', label: 'Mojoroto' },
+            'Kota': { lat: -7.8185, lng: 112.0175, color: '#002B84', label: 'Kota' },
+            'Pesantren': { lat: -7.8380, lng: 112.0460, color: '#1E3653', label: 'Pesantren' }
+        };
+
+        let mapInstance = null;
+        const districtMarkers = {};
+
+        function initKediriMap() {
+            const mapEl = document.getElementById('kediri-map');
+            if (!mapEl || typeof L === 'undefined') return;
+
+            // Inisialisasi peta di koordinat pusat Kota Kediri
+            mapInstance = L.map('kediri-map', {
+                center: [-7.8228, 112.0119],
+                zoom: 13,
+                minZoom: 11,
+                maxZoom: 18,
+                scrollWheelZoom: false
+            });
+
+            // Tile Layer OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+            }).addTo(mapInstance);
+
+            // Tambahkan Custom Badge Pin Marker untuk masing-masing kecamatan
+            Object.keys(districtCoords).forEach(name => {
+                const info = districtCoords[name];
+                const stats = districtData[name] || {};
+
+                const customIcon = L.divIcon({
+                    className: 'custom-district-marker',
+                    html: `
+                        <div class="cursor-pointer flex items-center justify-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-xs font-bold shadow-md border-2 border-white transition-all transform hover:scale-105" style="background-color: ${info.color};">
+                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+                                Kec. ${name}
+                            </span>
+                        </div>
+                    `,
+                    iconSize: [120, 36],
+                    iconAnchor: [60, 18]
+                });
+
+                const marker = L.marker([info.lat, info.lng], { icon: customIcon }).addTo(mapInstance);
+
+                const popupHtml = `
+                    <div style="min-width: 170px; font-family: Inter, sans-serif;">
+                        <div style="font-weight: 700; font-size: 13px; color: ${info.color}; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">
+                            Kecamatan ${name}
+                        </div>
+                        <div style="font-size: 11.5px; color: #4b5563; line-height: 1.5;">
+                            <div>Kelurahan: <strong style="color: #111827;">${stats.kel || '-'}</strong></div>
+                            <div>Total Usulan: <strong style="color: #111827;">${stats.usulan || '-'}</strong></div>
+                            <div>Pengerjaan: <strong style="color: #d97706;">${stats.proses || '-'}</strong></div>
+                            <div>Selesai: <strong style="color: #054735;">${stats.selesai || '-'}</strong></div>
+                        </div>
+                    </div>
+                `;
+                marker.bindPopup(popupHtml);
+
+                marker.on('click', () => {
+                    selectDistrict(name, false);
+                });
+
+                districtMarkers[name] = marker;
+            });
+
+            // Resize observer / window resize handler agar tile tidak berantakan
+            setTimeout(() => {
+                mapInstance.invalidateSize();
+            }, 300);
+        }
+
+        function selectDistrict(name, shouldFly = true) {
             const d = districtData[name];
             if (!d) return;
 
@@ -879,17 +1063,36 @@
             document.getElementById('map-stat-proses').textContent = d.proses;
             document.getElementById('map-stat-selesai').textContent = d.selesai;
 
-            // Highlight corresponding pin
+            // Highlight tombol kecamatan
             ['mojoroto', 'kota', 'pesantren'].forEach(key => {
-                const pin = document.getElementById('map-pin-' + key);
-                if (pin) {
+                const btn = document.getElementById('btn-dist-' + key);
+                if (btn) {
                     if (key === name.toLowerCase()) {
-                        pin.classList.add('ring-4', 'ring-gold');
+                        btn.className = 'district-btn flex-1 py-2 px-3 rounded border font-semibold text-xs transition-all bg-primary text-white border-primary shadow-sm';
                     } else {
-                        pin.classList.remove('ring-4', 'ring-gold');
+                        btn.className = 'district-btn flex-1 py-2 px-3 rounded border font-semibold text-xs transition-all bg-surface-subtle text-on-surface border-outline-variant hover:border-primary';
                     }
                 }
             });
+
+            // Fly map to district coordinates & open popup
+            const info = districtCoords[name];
+            if (mapInstance && info) {
+                if (shouldFly) {
+                    mapInstance.flyTo([info.lat, info.lng], 14, { duration: 0.8 });
+                }
+                const marker = districtMarkers[name];
+                if (marker) {
+                    marker.openPopup();
+                }
+            }
+        }
+
+        // Jalankan inisialisasi peta setelah DOM selesai dimuat
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initKediriMap);
+        } else {
+            initKediriMap();
         }
 
         // FAQ Toggle
@@ -968,6 +1171,52 @@
 
         function closeProgramModal() {
             document.getElementById('program-modal').classList.add('hidden');
+        }
+
+        // Modal Pembaca Berita
+        const allBerita = @json($beritaList);
+
+        function openBeritaModal(idx) {
+            const b = allBerita[idx];
+            if (!b) return;
+
+            const fallbackImg = "{{ asset('assets/images/samples/building.jpg') }}";
+            const imgUrl = b.image_url || fallbackImg;
+
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-container text-primary">${b.kategori || 'Berita'}</span>
+                        <span class="text-xs text-on-surface-muted flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">calendar_today</span>
+                            ${b.tanggal || ''}
+                        </span>
+                    </div>
+
+                    <h3 class="text-xl sm:text-2xl font-bold text-on-surface leading-snug">${b.judul || ''}</h3>
+
+                    <div class="rounded-lg overflow-hidden border border-outline-variant bg-surface-container max-h-80">
+                        <img src="${imgUrl}" alt="${b.judul || 'Foto Berita'}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='${fallbackImg}';">
+                    </div>
+
+                    <div class="text-xs sm:text-sm text-on-surface leading-relaxed space-y-3 whitespace-pre-line">
+                        ${b.isi || b.ringkasan || ''}
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-outline-variant flex justify-end">
+                        <button type="button" onclick="closeBeritaModal()" class="px-5 py-2 rounded bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-colors">Tutup</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('berita-modal-content').innerHTML = content;
+            document.getElementById('berita-modal').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeBeritaModal() {
+            document.getElementById('berita-modal').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         }
     </script>
 </body>

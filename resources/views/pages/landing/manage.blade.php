@@ -80,7 +80,7 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link fw-semibold text-primary" id="berita-tab" data-bs-toggle="tab" data-bs-target="#berita-pane" type="button" role="tab" aria-controls="berita-pane" aria-selected="false">
-                        <i class="bi bi-newspaper me-1"></i> Berita &amp; Publikasi
+                        <i class="bi bi-newspaper me-1"></i> Kelola Berita
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -128,7 +128,7 @@
                                     <div class="card-body p-3">
                                         <!-- Pratinjau Foto -->
                                         <div class="mb-3 position-relative rounded overflow-hidden" style="height: 180px; background-color: #1e3653;">
-                                            <img src="{{ $slide['image_url'] ?? '' }}" alt="Preview Slide {{ $idx + 1 }}" class="w-100 h-100 object-fit-cover opacity-75">
+                                            <img src="{{ $slide['image_url'] ?? asset('assets/images/samples/architecture1.jpg') }}" alt="Preview Slide {{ $idx + 1 }}" class="w-100 h-100 object-fit-cover opacity-75" onerror="this.onerror=null; this.src='{{ asset('assets/images/samples/architecture1.jpg') }}';">
                                             <div class="position-absolute bottom-0 start-0 p-2 text-white bg-dark bg-opacity-75 w-100 small">
                                                 <div class="fw-bold text-truncate">{{ $slide['title'] ?? '' }}</div>
                                             </div>
@@ -399,95 +399,200 @@
                     </form>
                 </div>
 
-                <!-- 4. TAB BERITA & PUBLIKASI -->
+                <!-- 4. TAB KELOLA BERITA -->
                 <div class="tab-pane fade" id="berita-pane" role="tabpanel" aria-labelledby="berita-tab">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <div>
-                            <h5 class="fw-bold mb-1 text-primary">Berita, Pengumuman &amp; Laporan Publik</h5>
-                            <p class="text-muted small mb-0">Kelola artikel berita utama, jadwal pengumuman, dan tautan laporan publik yang tampil di landing page.</p>
+                            <h5 class="fw-bold mb-1 text-primary">Kelola Berita Landing Page</h5>
+                            <p class="text-muted small mb-0">Kelola artikel berita, survei teknis, dan informasi kegiatan RTLH yang tampil di landing page (bisa menambah dan menghapus berita).</p>
                         </div>
-                        <form action="{{ route('landing-page.reset') }}" method="POST" onsubmit="return confirm('Kembalikan Berita & Publikasi ke default?');">
-                            @csrf
-                            <input type="hidden" name="section" value="publikasi">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Default
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-primary px-3" data-bs-toggle="modal" data-bs-target="#modalTambahBerita">
+                                <i class="bi bi-plus-circle me-1"></i> Tambah Berita Baru
                             </button>
-                        </form>
+                            <form action="{{ route('landing-page.reset') }}" method="POST" onsubmit="return confirm('Kembalikan daftar berita ke default?');">
+                                @csrf
+                                <input type="hidden" name="section" value="berita_list">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Default
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
-                    @php
-                        $berita = $publikasi['berita_utama'] ?? [];
-                        $pengumuman = $publikasi['daftar_pengumuman'] ?? [];
-                    @endphp
+                    <!-- Tabel Daftar Berita -->
+                    <div class="stitch-card mb-3">
+                        <div class="table-responsive">
+                            <table class="stitch-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;" class="ps-3 text-center">No</th>
+                                        <th style="width: 100px;">Foto</th>
+                                        <th>Judul Berita &amp; Kategori</th>
+                                        <th style="width: 150px;">Tanggal</th>
+                                        <th>Ringkasan</th>
+                                        <th style="width: 110px;" class="text-end pe-3">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($beritaList as $idx => $b)
+                                        <tr>
+                                            <td class="ps-3 text-center font-mono-num text-muted">{{ $idx + 1 }}</td>
+                                            <td>
+                                                <img src="{{ $b['image_url'] ?? asset('assets/images/samples/building.jpg') }}" 
+                                                     alt="Foto Berita" 
+                                                     class="rounded border" 
+                                                     style="width: 76px; height: 48px; object-fit: cover;"
+                                                     onerror="this.onerror=null; this.src='{{ asset('assets/images/samples/building.jpg') }}';">
+                                            </td>
+                                            <td>
+                                                <span class="badge rounded-pill font-stitch mb-1" style="background: var(--stitch-info-bg); color: var(--stitch-info-text); font-size: 11px; font-weight: 600;">{{ $b['kategori'] ?? 'Berita' }}</span>
+                                                <div class="fw-bold text-dark text-truncate font-stitch" style="max-width: 320px;" title="{{ $b['judul'] ?? '' }}">
+                                                    {{ $b['judul'] ?? '-' }}
+                                                </div>
+                                            </td>
+                                            <td class="small text-muted font-mono-num">
+                                                <i class="bi bi-calendar-event me-1"></i>{{ $b['tanggal'] ?? '-' }}
+                                            </td>
+                                            <td class="small text-muted font-stitch" style="max-width: 280px;">
+                                                <div class="text-truncate" title="{{ $b['ringkasan'] ?? '' }}">
+                                                    {{ $b['ringkasan'] ?? '-' }}
+                                                </div>
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                                    <button type="button" class="stitch-btn-edit" data-bs-toggle="modal" data-bs-target="#modalEditBerita{{ $b['id'] ?? $idx }}" title="Edit Berita">
+                                                        <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                                                    </button>
+                                                    <form action="{{ route('landing-page.delete-berita', $b['id'] ?? $idx) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus berita ini?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="stitch-btn-delete" title="Hapus Berita">
+                                                            <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4 text-muted">
+                                                <i class="bi bi-newspaper fs-3 d-block mb-2 text-secondary"></i>
+                                                Belum ada berita tersimpan. Silakan klik tombol <strong>"Tambah Berita Baru"</strong> di atas.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                    <form action="{{ route('landing-page.update-publikasi') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        <div class="row g-4">
-                            <!-- Berita Utama -->
-                            <div class="col-12 col-lg-7">
-                                <div class="card border shadow-none p-3 h-100">
-                                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-card-heading me-1"></i> Berita Utama Unggulan</h6>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold">Judul Berita:</label>
-                                        <input type="text" name="berita_judul" class="form-control form-control-sm" value="{{ $berita['judul'] ?? '' }}" required>
+                    <!-- Modal Tambah Berita Baru -->
+                    <div class="modal fade" id="modalTambahBerita" tabindex="-1" aria-labelledby="modalTambahBeritaLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <form action="{{ route('landing-page.store-berita') }}" method="POST" enctype="multipart/form-data">
+                                    @csrf
+                                    <div class="modal-header">
+                                        <h6 class="modal-title fw-bold text-primary" id="modalTambahBeritaLabel"><i class="bi bi-plus-circle me-1"></i> Tambah Artikel Berita Baru</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold">Tanggal Berita:</label>
-                                        <input type="text" name="berita_tanggal" class="form-control form-control-sm" value="{{ $berita['tanggal'] ?? '18 November 2026' }}" required>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">Ringkasan Berita:</label>
-                                        <textarea name="berita_ringkasan" class="form-control form-control-sm" rows="3" required>{{ $berita['ringkasan'] ?? '' }}</textarea>
-                                    </div>
-
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold">Foto Berita:</label>
-                                        <div class="d-flex align-items-center gap-3 mb-2">
-                                            <img src="{{ $berita['image_url'] ?? '' }}" alt="Foto Berita" class="rounded border" style="width: 100px; height: 60px; object-fit: cover;">
-                                            <div class="flex-grow-1">
-                                                <input type="file" name="berita_image" class="form-control form-control-sm" accept="image/*">
-                                                <input type="text" name="berita_image_url" class="form-control form-control-sm mt-1" value="{{ $berita['image_url'] ?? '' }}" placeholder="Atau masukkan URL foto...">
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-12 col-md-8">
+                                                <label class="form-label small fw-bold">Judul Berita <span class="text-danger">*</span></label>
+                                                <input type="text" name="judul" class="form-control form-control-sm" placeholder="Contoh: DPKP Rampungkan Verifikasi RTLH..." required>
+                                            </div>
+                                            <div class="col-12 col-md-4">
+                                                <label class="form-label small fw-bold">Kategori Berita <span class="text-danger">*</span></label>
+                                                <input type="text" name="kategori" class="form-control form-control-sm" placeholder="Contoh: Kegiatan, Sosialisasi, Liputan" value="Kegiatan" required>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label small fw-bold">Tanggal Berita <span class="text-danger">*</span></label>
+                                                <input type="text" name="tanggal" class="form-control form-control-sm" value="{{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}" required>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label small fw-bold">Upload Foto Berita:</label>
+                                                <input type="file" name="image_file" class="form-control form-control-sm" accept="image/*">
+                                                <input type="text" name="image_url" class="form-control form-control-sm mt-1" placeholder="Atau masukkan URL foto jika ada...">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small fw-bold">Ringkasan Berita (Tampil di Kartu Preview) <span class="text-danger">*</span></label>
+                                                <textarea name="ringkasan" class="form-control form-control-sm" rows="3" placeholder="Tuliskan 1-2 kalimat ringkasan penting berita ini..." required></textarea>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small fw-bold">Isi Lengkap Berita (Opsional)</label>
+                                                <textarea name="isi" class="form-control form-control-sm" rows="6" placeholder="Tuliskan isi artikel berita secara lengkap..."></textarea>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-sm btn-primary px-3"><i class="bi bi-save me-1"></i> Simpan Berita</button>
+                                    </div>
+                                </form>
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Pengumuman & Laporan Publik -->
-                            <div class="col-12 col-lg-5">
-                                <div class="card border shadow-none p-3 h-100">
-                                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-megaphone me-1"></i> Daftar Pengumuman &amp; Laporan</h6>
-
-                                    <!-- Pengumuman 1 -->
-                                    <div class="p-2 border rounded bg-light mb-3">
-                                        <span class="badge bg-secondary mb-1">Item 1: Pengumuman</span>
-                                        <label class="form-label small fw-bold d-block mb-1">Judul Pengumuman:</label>
-                                        <input type="text" name="pengumuman_1_judul" class="form-control form-control-sm mb-1" value="{{ $pengumuman[0]['judul'] ?? '' }}">
-                                        <label class="form-label small text-muted mb-0">Tanggal / Keterangan:</label>
-                                        <input type="text" name="pengumuman_1_tgl" class="form-control form-control-sm" value="{{ $pengumuman[0]['tanggal'] ?? '10 November 2026' }}">
-                                    </div>
-
-                                    <!-- Pengumuman 2 -->
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge bg-primary mb-1">Item 2: Laporan Publik</span>
-                                        <label class="form-label small fw-bold d-block mb-1">Judul Laporan Publik:</label>
-                                        <input type="text" name="pengumuman_2_judul" class="form-control form-control-sm mb-1" value="{{ $pengumuman[1]['judul'] ?? '' }}">
-                                        <label class="form-label small text-muted mb-0">Format / Keterangan:</label>
-                                        <input type="text" name="pengumuman_2_tgl" class="form-control form-control-sm" value="{{ $pengumuman[1]['tanggal'] ?? 'PDF 2,4 MB' }}">
-                                    </div>
+                    <!-- Modals Edit Berita -->
+                    @foreach($beritaList as $idx => $b)
+                        <div class="modal fade" id="modalEditBerita{{ $b['id'] ?? $idx }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form action="{{ route('landing-page.update-berita', $b['id'] ?? $idx) }}" method="POST" enctype="multipart/form-data">
+                                        @csrf
+                                        <div class="modal-header">
+                                            <h6 class="modal-title fw-bold text-primary"><i class="bi bi-pencil-square me-1"></i> Edit Artikel Berita</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-3">
+                                                <div class="col-12 col-md-8">
+                                                    <label class="form-label small fw-bold">Judul Berita <span class="text-danger">*</span></label>
+                                                    <input type="text" name="judul" class="form-control form-control-sm" value="{{ $b['judul'] ?? '' }}" required>
+                                                </div>
+                                                <div class="col-12 col-md-4">
+                                                    <label class="form-label small fw-bold">Kategori Berita <span class="text-danger">*</span></label>
+                                                    <input type="text" name="kategori" class="form-control form-control-sm" value="{{ $b['kategori'] ?? 'Berita' }}" required>
+                                                </div>
+                                                <div class="col-12 col-md-6">
+                                                    <label class="form-label small fw-bold">Tanggal Berita <span class="text-danger">*</span></label>
+                                                    <input type="text" name="tanggal" class="form-control form-control-sm" value="{{ $b['tanggal'] ?? '' }}" required>
+                                                </div>
+                                                <div class="col-12 col-md-6">
+                                                    <label class="form-label small fw-bold">Foto Berita:</label>
+                                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                                        <img src="{{ $b['image_url'] ?? asset('assets/images/samples/building.jpg') }}" 
+                                                             alt="Preview" 
+                                                             class="rounded border" 
+                                                             style="width: 60px; height: 38px; object-fit: cover;"
+                                                             onerror="this.onerror=null; this.src='{{ asset('assets/images/samples/building.jpg') }}';">
+                                                        <div class="flex-grow-1">
+                                                            <input type="file" name="image_file" class="form-control form-control-sm" accept="image/*">
+                                                        </div>
+                                                    </div>
+                                                    <input type="text" name="image_url" class="form-control form-control-sm" value="{{ $b['image_url'] ?? '' }}" placeholder="Atau masukkan URL foto...">
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-bold">Ringkasan Berita <span class="text-danger">*</span></label>
+                                                    <textarea name="ringkasan" class="form-control form-control-sm" rows="3" required>{{ $b['ringkasan'] ?? '' }}</textarea>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-bold">Isi Lengkap Berita</label>
+                                                    <textarea name="isi" class="form-control form-control-sm" rows="6">{{ $b['isi'] ?? ($b['ringkasan'] ?? '') }}</textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-sm btn-primary px-3"><i class="bi bi-save me-1"></i> Perbarui Berita</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="text-end mt-4">
-                            <button type="submit" class="btn btn-primary px-4">
-                                <i class="bi bi-save me-1"></i> Simpan Publikasi &amp; Berita
-                            </button>
-                        </div>
-                    </form>
+                    @endforeach
                 </div>
 
                 <!-- 5. TAB GALERI REALISASI BEFORE-AFTER -->
@@ -594,39 +699,41 @@
                     </div>
 
                     <!-- Tabel Daftar FAQ -->
-                    <div class="table-responsive mb-4">
-                        <table class="table table-bordered table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 50px;">No</th>
-                                    <th style="width: 35%;">Pertanyaan</th>
-                                    <th>Jawaban</th>
-                                    <th style="width: 80px;" class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($faqItems as $fIdx => $faq)
+                    <div class="stitch-card mb-4">
+                        <div class="table-responsive">
+                            <table class="stitch-table">
+                                <thead>
                                     <tr>
-                                        <td class="text-center">{{ $fIdx + 1 }}</td>
-                                        <td class="fw-semibold text-dark">{{ $faq['tanya'] ?? '' }}</td>
-                                        <td class="small text-muted">{{ $faq['jawab'] ?? '' }}</td>
-                                        <td class="text-center">
-                                            <form action="{{ route('landing-page.delete-faq', $faq['id'] ?? $fIdx) }}" method="POST" onsubmit="return confirm('Hapus pertanyaan FAQ ini?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus FAQ">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
-                                        </td>
+                                        <th style="width: 50px;" class="ps-3 text-center">No</th>
+                                        <th style="width: 35%;">Pertanyaan</th>
+                                        <th>Jawaban</th>
+                                        <th style="width: 80px;" class="text-end pe-3">Aksi</th>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-center py-3 text-muted">Belum ada pertanyaan FAQ.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @forelse($faqItems as $fIdx => $faq)
+                                        <tr>
+                                            <td class="ps-3 text-center font-mono-num text-muted">{{ $fIdx + 1 }}</td>
+                                            <td class="fw-semibold text-dark font-stitch" style="font-size: 13.5px;">{{ $faq['tanya'] ?? '' }}</td>
+                                            <td class="small text-muted font-stitch">{{ $faq['jawab'] ?? '' }}</td>
+                                            <td class="text-end pe-3">
+                                                <form action="{{ route('landing-page.delete-faq', $faq['id'] ?? $fIdx) }}" method="POST" onsubmit="return confirm('Hapus pertanyaan FAQ ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="stitch-btn-delete" title="Hapus FAQ">
+                                                        <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted font-stitch">Belum ada pertanyaan FAQ.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Form Tambah FAQ Baru -->
